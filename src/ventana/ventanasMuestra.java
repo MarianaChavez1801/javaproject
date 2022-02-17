@@ -664,13 +664,16 @@ public class ventanasMuestra extends javax.swing.JFrame{
         //ListaLaboratorio.addElement("Selecciona un laboratorio");
         Connection c = conexionConsulta.conectar();
         try{
-            PreparedStatement pstm = c.prepareStatement("SELECT NUM_COMP FROM EQUIPOS WHERE ID_LAB= ? ORDER BY NUM_COMP ASC", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            PreparedStatement pstm = c.prepareStatement("SELECT NUM_COMP, ASIGNADA FROM EQUIPOS WHERE ID_LAB= ? ORDER BY NUM_COMP ASC", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
             pstm.setString(1, carrito);
             ResultSet res = pstm.executeQuery();
             while(res.next()){
+                int asignada = res.getInt("ASIGNADA");
+                if (asignada == 0){
                 ListaLaboratorio[n] = res.getString("NUM_COMP");
                 //System.out.println(ListaLaboratorio[n].toString());
                 n ++;
+                }
                 
             }
             
@@ -1529,6 +1532,7 @@ public class ventanasMuestra extends javax.swing.JFrame{
     public void devolver() throws Exception
     {   int confirmaNumero = 3; //cuando no se ha confirmado el numero de cuenta
         int confirmarPenalizacion = 1;
+         String mensaje = "";
         try
         {
             //Establece los valores para la sentencia SQL
@@ -1594,7 +1598,7 @@ public class ventanasMuestra extends javax.swing.JFrame{
                                     //Se muestra alerta al usuario indicando el tiempo que ha excedido y las semanas que corresponden 
                                     int hours = (int)(diferencia /60);
                                     int minutos = (int)diferencia % 60;
-                                    String mensaje =  "El alumno lleva " + hours+" horas con "+minutos+ " minutos de retraso \n Acreedor a "+ Math.ceil(diferencia/15)+" semanas de penalización";
+                                    mensaje =  "El alumno lleva " + hours+" horas con "+minutos+ " minutos de retraso \n Acreedor a "+ Math.ceil(diferencia/15)+" semanas de penalización";
                                     confirmarPenalizacion = JOptionPane.showConfirmDialog(null,mensaje,"Tiempo de Prestamo Excedido",JOptionPane.OK_CANCEL_OPTION);
                                     if (confirmarPenalizacion == 0){
                                         /*JDateChooser jd = new JDateChooser();
@@ -1629,25 +1633,68 @@ public class ventanasMuestra extends javax.swing.JFrame{
                                         System.out.println("Hasta esta fecha estara penalizado"+fechaPenaliza);
                                         System.out.println();
                                         try{                                                                                        // Fecha de hoy   Fecha obtenida     hora actual     este se queda igual razon     se queda igual   igual   igual     fecha obtenida     hora actual  se queda igual                  
-                                        PreparedStatement penalizaUser = c.prepareStatement("INSERT INTO PENALIZACIONES (EDO_PENALIZA,FECHA_INICIO, FECHA_FIN_PENALIZA, HORA_PENALIZA, LAB_PENALIZA, RAZON_PENALIZA,TIPO_PENALIZACION,MULTA,FK_NUM_CTA,DIA_DESPENALIZA,HORA_DESPENALIZA,LAB_DESPENALIZA) VALUES "
-                                                + "('1',?,?,?,?,?,?,?,?,?,?,?)");
-                                        penalizaUser.setString(1, fechaHoy); //fecha hoy
-                                        penalizaUser.setString(2, fechaPenaliza); //fecha obtenida
-                                        penalizaUser.setString(3, horaPenaliza); //hora actual
-                                        penalizaUser.setString(4, idLab); //
-                                        penalizaUser.setString(5, mensaje); //
-                                        penalizaUser.setString(6, "2"); //
-                                        penalizaUser.setString(7, "0.0"); //
-                                        penalizaUser.setString(8, cuenta); //
-                                        penalizaUser.setString(9, fechaPenaliza); // fecha obtenida
-                                        penalizaUser.setString(10,horaPenaliza); //hora actual
-                                        penalizaUser.setString(11,"SIN LAB" );
-                                        System.out.println(penalizaUser);
-                                        penalizaUser.execute();
-                                        penalizaUser.close();
-                                        JOptionPane.showMessageDialog(null, "Se ha registrado la penalizacion, la fecha de termino de la penalizacion es:\n"+fechaPenaliza, "Éxito", JOptionPane.INFORMATION_MESSAGE );
-                                        //conexionConsulta.desconectar();
-                                        
+                                            int resp = JOptionPane.showConfirmDialog(null, "Hasta esta fecha estara penalizado"+fechaPenaliza+"Desea confirmar esta fecha de penalización",//<- EL MENSAJE 
+                                            "Alerta!"/*<- El título de la ventana*/, JOptionPane.YES_NO_OPTION/*Las opciones (si o no)*/, JOptionPane.WARNING_MESSAGE/*El tipo de ventana, en este caso WARNING*/);
+                                            if (resp == 0){
+                                                    PreparedStatement penalizaUser = c.prepareStatement("INSERT INTO PENALIZACIONES (EDO_PENALIZA,FECHA_INICIO, FECHA_FIN_PENALIZA, HORA_PENALIZA, LAB_PENALIZA, RAZON_PENALIZA,TIPO_PENALIZACION,MULTA,FK_NUM_CTA,DIA_DESPENALIZA,HORA_DESPENALIZA,LAB_DESPENALIZA) VALUES "
+                                                            + "('1',?,?,?,?,?,?,?,?,?,?,?)");
+                                                    penalizaUser.setString(1, fechaHoy); //fecha hoy
+                                                    penalizaUser.setString(2, fechaPenaliza); //fecha obtenida
+                                                    penalizaUser.setString(3, horaPenaliza); //hora actual
+                                                    penalizaUser.setString(4, idLab); //
+                                                    penalizaUser.setString(5, mensaje); //
+                                                    penalizaUser.setString(6, "2"); //
+                                                    penalizaUser.setString(7, "0.0"); //
+                                                    penalizaUser.setString(8, cuenta); //
+                                                    penalizaUser.setString(9, fechaPenaliza); // fecha obtenida
+                                                    penalizaUser.setString(10,horaPenaliza); //hora actual
+                                                    penalizaUser.setString(11,"SIN LAB" );
+                                                    System.out.println(penalizaUser);
+                                                    penalizaUser.execute();
+                                                    penalizaUser.close();
+                                                    JOptionPane.showMessageDialog(null, "Se ha registrado la penalizacion, la fecha de termino de la penalizacion es:\n"+fechaPenaliza, "Éxito", JOptionPane.INFORMATION_MESSAGE );
+                                                    //conexionConsulta.desconectar();
+                                            } else {
+                                                JDateChooser jd = new JDateChooser();
+                                                String message ="Selecciona fecha";
+                                                Object[] params = {message,jd};
+                                                String fPenalizacion = JOptionPane.showInputDialog(null,params,"Fecha Penalización",JOptionPane.OK_CANCEL_OPTION);
+                                                String datePenalizacion="";
+                                                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                                                datePenalizacion=sdf.format(((JDateChooser)params[1]).getDate());
+                                                System.out.println("Fecha de termino de penalizacion "+ datePenalizacion);
+                                                Calendar dateNow = Calendar.getInstance();
+                                                String fechaNow = sdf.format(new Date());
+                                                int hNow = dateNow.get(Calendar.HOUR_OF_DAY);
+                                                String mNow = Integer.toString( dateNow.get(Calendar.MINUTE));
+                                                if (mNow.length()==1){ mNow= "0"+mNow; }
+                                                String sNow =  Integer.toString(dateNow.get(Calendar.SECOND));
+                                                if (sNow.length()==1){ sNow= "0"+sNow; }
+                                                String hourNow = Integer.toString(hNow)+":"+mNow+":"+sNow;
+                                                try{
+                                                    PreparedStatement penalizaUser = c.prepareStatement("INSERT INTO PENALIZACIONES (EDO_PENALIZA,FECHA_INICIO, FECHA_FIN_PENALIZA, HORA_PENALIZA, LAB_PENALIZA, RAZON_PENALIZA,TIPO_PENALIZACION,MULTA,FK_NUM_CTA,DIA_DESPENALIZA,HORA_DESPENALIZA,LAB_DESPENALIZA) VALUES "
+                                                            + "('1',?,?,?,?,?,?,?,?,?,?,?)");
+                                                    penalizaUser.setString(1, fechaNow);
+                                                    penalizaUser.setString(2, datePenalizacion);
+                                                    penalizaUser.setString(3, hourNow);
+                                                    penalizaUser.setString(4, idLab);
+                                                    penalizaUser.setString(5, mensaje);
+                                                    penalizaUser.setString(6, "2");
+                                                    penalizaUser.setString(7, "0.0");
+                                                    penalizaUser.setString(8, cuenta);
+                                                    penalizaUser.setString(9, datePenalizacion);
+                                                    penalizaUser.setString(10,hourNow);
+                                                    penalizaUser.setString(11,"SIN LAB" );
+                                                    System.out.println(penalizaUser);
+                                                    penalizaUser.execute();
+                                                    penalizaUser.close();
+                                                    JOptionPane.showMessageDialog(null, "Se ha registrado la penalizacion", "Éxito", JOptionPane.INFORMATION_MESSAGE );
+                                                }catch(SQLException e){
+                                                    JOptionPane.showMessageDialog(null, "Ocurrió un error al registrar la penalización\nExcepción es "+e+" y su descripcion:"+e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE );
+                                                     labelImagenHuella.setIcon(null);
+                                                }
+                                                    
+                                            }
                                         }catch(SQLException e){
                                             JOptionPane.showMessageDialog(null, "Ocurrió un error al registrar la penalización\nExcepción es "+e+" y su descripcion:"+e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE );
                                              labelImagenHuella.setIcon(null);
@@ -1678,7 +1725,7 @@ public class ventanasMuestra extends javax.swing.JFrame{
                                         //String hora = t.getTime();
                                         PreparedStatement liberarPrestamo = c.prepareStatement("UPDATE PRESTAMOS SET HORA_FIN=?, OBS_DEVOLUCION_MOVIL=? WHERE ID_PRESTAMO = ?");
                                         liberarPrestamo.setString(1, hora);
-                                        liberarPrestamo.setString(2, observaciones);
+                                        liberarPrestamo.setString(2, observaciones.concat(" "+mensaje));
                                         liberarPrestamo.setString(3, idPrestamo);
                                         liberarPrestamo.execute();
                                         liberarPrestamo.close();
@@ -1757,6 +1804,7 @@ public class ventanasMuestra extends javax.swing.JFrame{
     //metodo devolucion con numero de cuenta
     public void devolverCta() throws Exception
     {   
+        String mensaje = "";
         String cuenta = JOptionPane.showInputDialog("Número de Cuenta o RFC:");
         int confirmarPenalizacion = 1;
         int confirmaNumero = 3;
@@ -1817,7 +1865,7 @@ public class ventanasMuestra extends javax.swing.JFrame{
                                     //Se muestra alerta al usuario indicando el tiempo que ha excedido y las semanas que corresponden 
                                     int hours = (int)(diferencia /60);
                                     int minutos = (int)diferencia % 60;
-                                    String mensaje =  "El alumno lleva " + hours+" horas con "+minutos+ " minutos de retraso \n Acreedor a "+ Math.ceil(diferencia/15)+" semanas de penalización";
+                                    mensaje =  "El alumno lleva " + hours+" horas con "+minutos+ " minutos de retraso \n Acreedor a "+ Math.ceil(diferencia/15)+" semanas de penalización";
                                     confirmarPenalizacion = JOptionPane.showConfirmDialog(null,mensaje,"Tiempo de Prestamo Excedido",JOptionPane.OK_CANCEL_OPTION);
                                     if (confirmarPenalizacion == 0){
                                         /*JDateChooser jd = new JDateChooser();
@@ -1851,36 +1899,74 @@ public class ventanasMuestra extends javax.swing.JFrame{
                                         System.out.println(tiempoPenalizacion);
                                         System.out.println("Hasta esta fecha estara penalizado"+fechaPenaliza);
                                         System.out.println();
-                                        
-                                        
-                                        
-                                        try{                                                                                        // Fecha de hoy   Fecha obtenida     hora actual     este se queda igual razon     se queda igual   igual   igual     fecha obtenida     hora actual  se queda igual                  
-                                        PreparedStatement penalizaUser = c.prepareStatement("INSERT INTO PENALIZACIONES (EDO_PENALIZA,FECHA_INICIO, FECHA_FIN_PENALIZA, HORA_PENALIZA, LAB_PENALIZA, RAZON_PENALIZA,TIPO_PENALIZACION,MULTA,FK_NUM_CTA,DIA_DESPENALIZA,HORA_DESPENALIZA,LAB_DESPENALIZA) VALUES "
-                                                + "('1',?,?,?,?,?,?,?,?,?,?,?)");
-                                        penalizaUser.setString(1, fechaHoy); //fecha hoy
-                                        penalizaUser.setString(2, fechaPenaliza); //fecha obtenida
-                                        penalizaUser.setString(3, horaPenaliza); //hora actual
-                                        penalizaUser.setString(4, idLab); //
-                                        penalizaUser.setString(5, mensaje); //
-                                        penalizaUser.setString(6, "2"); //
-                                        penalizaUser.setString(7, "0.0"); //
-                                        penalizaUser.setString(8, cuenta); //
-                                        penalizaUser.setString(9, fechaPenaliza); // fecha obtenida
-                                        penalizaUser.setString(10,horaPenaliza); //hora actual
-                                        penalizaUser.setString(11,"SIN LAB" );
-                                        System.out.println(penalizaUser);
-                                        penalizaUser.execute();
-                                        penalizaUser.close();
-                                        JOptionPane.showMessageDialog(null, "Se ha registrado la penalizacion, la fecha de termino de la penalizacion es:\n"+fechaPenaliza, "Éxito", JOptionPane.INFORMATION_MESSAGE );
-                                        //conexionConsulta.desconectar();
-                                        
-                                        }catch(SQLException e){
-                                            JOptionPane.showMessageDialog(null, "Ocurrió un error al registrar la penalización\nExcepción es "+e+" y su descripcion:"+e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE );
-                                             labelImagenHuella.setIcon(null);
-                                        }/*finally{
-                                            conexionConsulta.desconectar();
-                                        }*/
-                                        
+                                        int resp = JOptionPane.showConfirmDialog(null, "Hasta esta fecha estara penalizado"+fechaPenaliza+"Desea confirmar esta fecha de penalización",//<- EL MENSAJE 
+                                        "Alerta!"/*<- El título de la ventana*/, JOptionPane.YES_NO_OPTION/*Las opciones (si o no)*/, JOptionPane.WARNING_MESSAGE/*El tipo de ventana, en este caso WARNING*/);
+                                        if (resp == 0){
+                                            try{                                                                                        // Fecha de hoy   Fecha obtenida     hora actual     este se queda igual razon     se queda igual   igual   igual     fecha obtenida     hora actual  se queda igual                  
+                                            PreparedStatement penalizaUser = c.prepareStatement("INSERT INTO PENALIZACIONES (EDO_PENALIZA,FECHA_INICIO, FECHA_FIN_PENALIZA, HORA_PENALIZA, LAB_PENALIZA, RAZON_PENALIZA,TIPO_PENALIZACION,MULTA,FK_NUM_CTA,DIA_DESPENALIZA,HORA_DESPENALIZA,LAB_DESPENALIZA) VALUES "
+                                                    + "('1',?,?,?,?,?,?,?,?,?,?,?)");
+                                            penalizaUser.setString(1, fechaHoy); //fecha hoy
+                                            penalizaUser.setString(2, fechaPenaliza); //fecha obtenida
+                                            penalizaUser.setString(3, horaPenaliza); //hora actual
+                                            penalizaUser.setString(4, idLab); //
+                                            penalizaUser.setString(5, mensaje); //
+                                            penalizaUser.setString(6, "2"); //
+                                            penalizaUser.setString(7, "0.0"); //
+                                            penalizaUser.setString(8, cuenta); //
+                                            penalizaUser.setString(9, fechaPenaliza); // fecha obtenida
+                                            penalizaUser.setString(10,horaPenaliza); //hora actual
+                                            penalizaUser.setString(11,"SIN LAB" );
+                                            System.out.println(penalizaUser);
+                                            penalizaUser.execute();
+                                            penalizaUser.close();
+                                            JOptionPane.showMessageDialog(null, "Se ha registrado la penalizacion, la fecha de termino de la penalizacion es:\n"+fechaPenaliza, "Éxito", JOptionPane.INFORMATION_MESSAGE );
+                                            //conexionConsulta.desconectar();
+                                            }catch(SQLException e){
+                                                JOptionPane.showMessageDialog(null, "Ocurrió un error al registrar la penalización\nExcepción es "+e+" y su descripcion:"+e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE );
+                                                 labelImagenHuella.setIcon(null);
+                                            }/*finally{
+                                                conexionConsulta.desconectar();
+                                            }*/
+                                        } else {
+                                            JDateChooser jd = new JDateChooser();
+                                            String message ="Selecciona fecha";
+                                            Object[] params = {message,jd};
+                                            String fPenalizacion = JOptionPane.showInputDialog(null,params,"Fecha Penalización",JOptionPane.OK_CANCEL_OPTION);
+                                            String datePenalizacion="";
+                                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                                            datePenalizacion=sdf.format(((JDateChooser)params[1]).getDate());
+                                            System.out.println("Fecha de termino de penalizacion "+ datePenalizacion);
+                                            Calendar dateNow = Calendar.getInstance();
+                                            String fechaNow = sdf.format(new Date());
+                                            int hNow = dateNow.get(Calendar.HOUR_OF_DAY);
+                                            String mNow = Integer.toString( dateNow.get(Calendar.MINUTE));
+                                            if (mNow.length()==1){ mNow= "0"+mNow; }
+                                            String sNow =  Integer.toString(dateNow.get(Calendar.SECOND));
+                                            if (sNow.length()==1){ sNow= "0"+sNow; }
+                                            String hourNow = Integer.toString(hNow)+":"+mNow+":"+sNow;
+                                            try{
+                                                PreparedStatement penalizaUser = c.prepareStatement("INSERT INTO PENALIZACIONES (EDO_PENALIZA,FECHA_INICIO, FECHA_FIN_PENALIZA, HORA_PENALIZA, LAB_PENALIZA, RAZON_PENALIZA,TIPO_PENALIZACION,MULTA,FK_NUM_CTA,DIA_DESPENALIZA,HORA_DESPENALIZA,LAB_DESPENALIZA) VALUES "
+                                                        + "('1',?,?,?,?,?,?,?,?,?,?,?)");
+                                                penalizaUser.setString(1, fechaNow);
+                                                penalizaUser.setString(2, datePenalizacion);
+                                                penalizaUser.setString(3, hourNow);
+                                                penalizaUser.setString(4, idLab);
+                                                penalizaUser.setString(5, mensaje);
+                                                penalizaUser.setString(6, "2");
+                                                penalizaUser.setString(7, "0.0");
+                                                penalizaUser.setString(8, cuenta);
+                                                penalizaUser.setString(9, datePenalizacion);
+                                                penalizaUser.setString(10,hourNow);
+                                                penalizaUser.setString(11,"SIN LAB" );
+                                                System.out.println(penalizaUser);
+                                                penalizaUser.execute();
+                                                penalizaUser.close();
+                                                JOptionPane.showMessageDialog(null, "Se ha registrado la penalizacion", "Éxito", JOptionPane.INFORMATION_MESSAGE );
+                                            }catch(SQLException e){
+                                                JOptionPane.showMessageDialog(null, "Ocurrió un error al registrar la penalización\nExcepción es "+e+" y su descripcion:"+e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE );
+                                                 labelImagenHuella.setIcon(null);
+                                            }
+                                        }
                                         
                                     }
                                 
@@ -1906,7 +1992,7 @@ public class ventanasMuestra extends javax.swing.JFrame{
                                         String hora2 = new SimpleDateFormat("HH:mm:ss").format(Calendar.getInstance().getTime());
                                         PreparedStatement liberarPrestamo = c.prepareStatement("UPDATE PRESTAMOS SET HORA_FIN=?, OBS_DEVOLUCION_MOVIL=? WHERE ID_PRESTAMO = ?");
                                         liberarPrestamo.setString(1, hora2);
-                                        liberarPrestamo.setString(2, observaciones);
+                                        liberarPrestamo.setString(2, observaciones.concat(" "+mensaje));
                                         liberarPrestamo.setString(3, idPrestamo);
                                         liberarPrestamo.execute();
                                         liberarPrestamo.close();

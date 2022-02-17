@@ -51,40 +51,45 @@ public class adminEquipos extends javax.swing.JFrame {
         
         //Pregunta el nombre de la persona a la cual corresponde dicha huella
         String nombreCarrito = JOptionPane.showInputDialog("Escriba el Nombre del laboratorio/carrito a AGREGAR: ").toUpperCase() ;
-        String nombreCorto = JOptionPane.showInputDialog("Escriba el Nombre corto para el laboratorio/carrito").toUpperCase();
-        if((nombreCarrito != null) && (nombreCorto != null)){
-            try{
-                //Establece los valores para la sentencia SQL
-                Connection c = conexionConsulta.conectar();                             
-                PreparedStatement guardarStmt = c.prepareStatement("INSERT INTO LABORATORIOS(ID_LAB, NOMBRE_LAB) VALUES (?, ? )");
-                guardarStmt.setString(1, nombreCorto);
-                guardarStmt.setString(2, nombreCarrito);
-                //Ejecuta la sentencia preparada
-                guardarStmt.execute();
-                guardarStmt.close();
-                
-                int numeroCarritos = Integer.parseInt(JOptionPane.showInputDialog("Escriba el numero de carritos que se agregaran en este carrito"));
-                int numeroCarritosCont = numeroCarritos;
-                int count = 0;
-                AgregarCarritosNuevos(numeroCarritos, count, nombreCorto );
-                JOptionPane.showMessageDialog(null, "El carrito con sus correspondientes equipos han sido registrados", "Éxito", JOptionPane.INFORMATION_MESSAGE );
-                conexionConsulta.desconectar();
-            }catch(SQLException ex){
-                if(ex instanceof SQLIntegrityConstraintViolationException ){
-                    //Si ocurre una excepcion de integridad de restriccion en primary key, lo indica
-                    JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un error al tratar de guardar los datos!!! \nIdentificador duplicado '"+nombreCorto+"' para el registro de usuario\n ** Los datos no se guardaron en la base de datos *** \nCorrija o use el panel de Identificación de Usuarios", "Error", JOptionPane.ERROR_MESSAGE );
+            String nombreCorto = JOptionPane.showInputDialog("Escriba el Nombre corto para el laboratorio/carrito").toUpperCase();
+            if((nombreCarrito != null) && (nombreCorto != null)){
+                if (nombreCarrito.length() <=5){
+                try{
+                    //Establece los valores para la sentencia SQL
+                    Connection c = conexionConsulta.conectar();                             
+                    PreparedStatement guardarStmt = c.prepareStatement("INSERT INTO LABORATORIOS(ID_LAB, NOMBRE_LAB) VALUES (?, ? )");
+                    guardarStmt.setString(1, nombreCorto);
+                    guardarStmt.setString(2, nombreCarrito);
+                    //Ejecuta la sentencia preparada
+                    guardarStmt.execute();
+                    guardarStmt.close();
+
+                    int numeroCarritos = Integer.parseInt(JOptionPane.showInputDialog("Escriba el numero de carritos que se agregaran en este carrito"));
+                    int numeroCarritosCont = numeroCarritos;
+                    int count = 0;
+                    AgregarCarritosNuevos(numeroCarritos, count, nombreCorto );
+                    JOptionPane.showMessageDialog(null, "El carrito con sus correspondientes equipos han sido registrados", "Éxito", JOptionPane.INFORMATION_MESSAGE );
+                    conexionConsulta.desconectar();
+                }catch(SQLException ex){
+                    if(ex instanceof SQLIntegrityConstraintViolationException ){
+                        //Si ocurre una excepcion de integridad de restriccion en primary key, lo indica
+                        JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un error al tratar de guardar los datos!!! \nIdentificador duplicado '"+nombreCorto+"' para el registro de usuario\n ** Los datos no se guardaron en la base de datos *** \nCorrija o use el panel de Identificación de Usuarios", "Error", JOptionPane.ERROR_MESSAGE );
+                    }
+                    else{
+                        //Si ocurre alguna otra excepcion la indica
+                        JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un error al tratar de guardar los datos!!! \n"+ex.getMessage()+"\n ** No se guardaron datos en la base de datos *** \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
+                    }
+                    System.err.println("¡¡¡Ocurrio un error al tratar de guardar los datos!!! \n\n ** No se guardaron datos en la base de datos *** \n Inténtelo nuevamente");
+                }finally{
+                    conexionConsulta.desconectar();
                 }
-                else{
-                    //Si ocurre alguna otra excepcion la indica
-                    JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un error al tratar de guardar los datos!!! \n"+ex.getMessage()+"\n ** No se guardaron datos en la base de datos *** \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
-                }
-                System.err.println("¡¡¡Ocurrio un error al tratar de guardar los datos!!! \n\n ** No se guardaron datos en la base de datos *** \n Inténtelo nuevamente");
-            }finally{
-                conexionConsulta.desconectar();
-            }
+             } else{
+                JOptionPane.showMessageDialog(null, "El nombre de LABORATORIO debe ser MAXIMO de 5 carcateres. Vuelva a intentarlo", "Error", JOptionPane.ERROR_MESSAGE );
+             }
         }else{
             JOptionPane.showMessageDialog(null, "Se debe de dar algún valor en ambos campos. Vuelva a intentarlo", "Error", JOptionPane.ERROR_MESSAGE );
         }
+       
     }//fin metodo guardarCarrito
     
     public void guardarEquipo() throws SQLException{

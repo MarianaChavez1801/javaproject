@@ -78,7 +78,7 @@ public class formularioRolGrupo extends javax.swing.JDialog {
                 }
             }
         }else{
-            JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un error al tratar de guardar los datos!!!\n RECUERDE QUE LA CONTRASEÑA DEBE SER DE ALMENOS 8 CARACTERES \n ** No se guardaron datos en la base de datos *** \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
+            JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un error al tratar de guardar los datos!!!\n RECUERDE QUE LA CONTRASEÑA DEBE SER DE ALMENOS 8 CARACTERES \n Recuerde que la contraseña debe contener al menos un(a):\n Minusculas,Mayusculas,Numero y Caracter especial\n ** No se guardaron datos en la base de datos *** \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
         }
         if (may == true && min == true && num == true && car == true && tam == true){
             return true;
@@ -344,7 +344,7 @@ public class formularioRolGrupo extends javax.swing.JDialog {
                         this.dispose();
                     }
                 }else{
-                    JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un error al tratar de guardar los datos!!!\n Recuerde que la contraseña debe contener al menos un(a):\n Minusculas,Mayusculas,Numero y Caracter especial\n ** No se guardaron datos en la base de datos *** \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
+                    //JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un error al tratar de guardar los datos!!! ** No se guardaron datos en la base de datos *** \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
                     pass1.setText(null);
                     pass2.setText(null);
                 }
