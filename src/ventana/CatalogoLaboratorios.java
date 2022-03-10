@@ -417,9 +417,9 @@ public class CatalogoLaboratorios extends javax.swing.JDialog {
         try {
             // TODO add your handling code here:
             if(creado == true){
-                System.err.println("ENTRE A CREADO");
+                System.err.println("ENTRE A CREADO"); //El grupo ya viene creado
                 if(eliminar == true){
-                    System.err.println("ENTRE A ELIMINAR");
+                    System.err.println("ENTRE A ELIMINAR"); // El grupo se va a eliminar
                     boolean eliminar1 = eliminarLaboratoriosSeleccionados();
                     if(eliminar1 == true){
                         //JOptionPane.showMessageDialog(null, "El grupo ha sido ACTUALIZADO con exito", "Éxito", JOptionPane.INFORMATION_MESSAGE );                          
@@ -427,7 +427,7 @@ public class CatalogoLaboratorios extends javax.swing.JDialog {
                         JOptionPane.showMessageDialog(null, "¡¡¡*Ocurrio un error al tratar de ACTUALIZAR los datos*!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
                     }
                 } else{
-                    System.err.println("ENTRE A CREADO NO ELIMINAR");
+                    System.err.println("ENTRE A CREADO NO ELIMINAR"); //El grupo ya esta creado pero no se va a eliminar
                     boolean exito1 = registroGruposSeleccionados();
                     if(exito1 == true){
                         JOptionPane.showMessageDialog(null, "El grupo ha sido registrado con exito", "Éxito", JOptionPane.INFORMATION_MESSAGE ); 
@@ -438,7 +438,7 @@ public class CatalogoLaboratorios extends javax.swing.JDialog {
                 
             } else {
                 if(nuevo == true){
-                    System.err.println("ENTRE A NUEVO");
+                    System.err.println("ENTRE A NUEVO"); // Se registrara un grupo NUEVO
                     boolean exito1 = registroGrupo();
                     if(exito1 == true){
                         JOptionPane.showMessageDialog(null, "El grupo ha sido registrado con exito", "Éxito", JOptionPane.INFORMATION_MESSAGE ); 

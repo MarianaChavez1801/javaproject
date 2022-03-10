@@ -9,6 +9,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import javax.swing.JOptionPane;
 import project2.conexionConsulta;
@@ -27,6 +29,7 @@ public class formularioGrupo extends javax.swing.JFrame {
     boolean exito = false;
     public String grupo;
     public String tipoUsuario;
+    String nombre = "";
     
     public formularioGrupo( ) {
         initComponents();
@@ -39,7 +42,6 @@ public class formularioGrupo extends javax.swing.JFrame {
         
         exito = false;
         boolean ingresaAdmin = false;
-        String nombre = "";
         nombre = new String(usuarioIngresa.getText());
         String password = "";
         password = new String(passIngresa.getPassword());
@@ -230,6 +232,25 @@ public class formularioGrupo extends javax.swing.JFrame {
                     adminEquipos ch = null;
                     ch = new adminEquipos();
                     ch.setVisible(true);
+                    ch.usuario = nombre;
+                    //Registro en 
+                    DateTimeFormatter dtf5 = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+                    System.out.println("yyyy/MM/dd-> "+dtf5.format(LocalDateTime.now()));
+                    DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm:ss");
+                    System.out.println("HH:mm:ss-> " + dtf.format(LocalDateTime.now()));
+                    try{
+                        Connection c = conexionConsulta.conectar();
+                        PreparedStatement registroLog = c.prepareStatement("INSERT INTO LOGS(NAME_USUARIO, ACCION, FECHA_ACCION, HORA_ACCION) values(?, ?, ?, ?)", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                        registroLog.setString(1, nombre);
+                        registroLog.setString(2, "Ingreso al sistema");
+                        registroLog.setString(3, dtf5.format(LocalDateTime.now()));
+                        registroLog.setString(4, dtf.format(LocalDateTime.now()));
+                        registroLog.execute();
+                        registroLog.close();
+                    }catch (SQLException e){
+                        JOptionPane.showMessageDialog(null, "Ocurrió un error al INSERTAR EN LOGS"+e, "Error", JOptionPane.ERROR_MESSAGE );
+                    }
+                    
                     this.setVisible(false);
                     this.dispose();
                 }else if(grupo == null){
@@ -242,6 +263,23 @@ public class formularioGrupo extends javax.swing.JFrame {
                     ch = new ventanasMuestra();
                     ch.setVisible(true);
                     ch.grupo = grupo;
+                    ch.usuario = nombre;
+                    DateTimeFormatter dtf5 = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+                    System.out.println("yyyy/MM/dd-> "+dtf5.format(LocalDateTime.now()));
+                    DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm:ss");
+                    System.out.println("HH:mm:ss-> " + dtf.format(LocalDateTime.now()));
+                    try{
+                        Connection c = conexionConsulta.conectar();
+                        PreparedStatement registroLog = c.prepareStatement("INSERT INTO LOGS(NAME_USUARIO, ACCION, FECHA_ACCION, HORA_ACCION) values(?, ?, ?, ?)", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                        registroLog.setString(1, nombre);
+                        registroLog.setString(2, "Ingreso al sistema");
+                        registroLog.setString(3, dtf5.format(LocalDateTime.now()));
+                        registroLog.setString(4, dtf.format(LocalDateTime.now()));
+                        registroLog.execute();
+                        registroLog.close();
+                    }catch (SQLException e){
+                        JOptionPane.showMessageDialog(null, "Ocurrió un error al INSERTAR EN LOGS"+e, "Error", JOptionPane.ERROR_MESSAGE );
+                    }
                     this.setVisible(false);
                     this.dispose();
                 }    

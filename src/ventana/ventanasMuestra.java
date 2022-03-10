@@ -26,10 +26,13 @@ import com.digitalpersona.onetouch.processing.DPFPImageQualityException;
 import com.digitalpersona.onetouch.verification.DPFPVerification;
 import com.digitalpersona.onetouch.verification.DPFPVerificationResult;
 import com.toedter.calendar.JDateChooser;
+import java.awt.Font;
 
 import java.util.logging.Logger.*;
 import java.util.logging.*;
 import java.awt.Image;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.sql.ResultSet;
 
 
@@ -60,6 +63,8 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Calendar;
 import java.time.*;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
 
 
 /**
@@ -74,12 +79,13 @@ public class ventanasMuestra extends javax.swing.JFrame{
     
         ResultSet rs;
         public String grupo;
+        public String usuario;
         
         
     public ventanasMuestra() {
         //initComponents();
         conexionConsulta.conectar();
-        
+        cerrar();
         try{
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception e) {
@@ -664,8 +670,9 @@ public class ventanasMuestra extends javax.swing.JFrame{
         //ListaLaboratorio.addElement("Selecciona un laboratorio");
         Connection c = conexionConsulta.conectar();
         try{
-            PreparedStatement pstm = c.prepareStatement("SELECT NUM_COMP, ASIGNADA FROM EQUIPOS WHERE ID_LAB= ? ORDER BY NUM_COMP ASC", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            PreparedStatement pstm = c.prepareStatement("SELECT NUM_COMP, ASIGNADA FROM EQUIPOS WHERE ID_LAB= ? AND UTILIZABLE = ? ORDER BY NUM_COMP ASC", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
             pstm.setString(1, carrito);
+            pstm.setString(2, "1");
             ResultSet res = pstm.executeQuery();
             while(res.next()){
                 int asignada = res.getInt("ASIGNADA");
@@ -867,6 +874,19 @@ public class ventanasMuestra extends javax.swing.JFrame{
 
                                                         JOptionPane.showMessageDialog(null, "El préstamo se autorizó y se registró correctamente", "Éxito", JOptionPane.INFORMATION_MESSAGE );
                                                         //conexionConsulta.desconectar();
+                                                        //Registro de actividad en LOGS
+                                                        DateTimeFormatter dtf5 = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+                                                        System.out.println("yyyy/MM/dd-> "+dtf5.format(LocalDateTime.now()));
+                                                        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm:ss");
+                                                        System.out.println("HH:mm:ss-> " + dtf.format(LocalDateTime.now()));
+                                                        PreparedStatement registroLog = c.prepareStatement("INSERT INTO LOGS(NAME_USUARIO, ACCION, FECHA_ACCION, HORA_ACCION) values(?, ?, ?, ?)", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                                                        registroLog.setString(1, usuario);
+                                                        registroLog.setString(2, "Realizo el prestamo del equipo "+idEquipo+" en el laboratorio"+carrito.toString());
+                                                        registroLog.setString(3, dtf5.format(LocalDateTime.now()));
+                                                        registroLog.setString(4, dtf.format(LocalDateTime.now()));
+                                                        registroLog.execute();
+                                                        registroLog.close();
+                                                        
                                                         Reclutador.clear();
                                                         labelImagenHuella.setIcon(null); 
                                                         botonAlta.setEnabled(false);
@@ -1069,6 +1089,19 @@ public class ventanasMuestra extends javax.swing.JFrame{
 
                                                     JOptionPane.showMessageDialog(null, "El préstamo se ha autorizado y se ha registrado correctamente", "Éxito", JOptionPane.INFORMATION_MESSAGE );
                                                     conexionConsulta.desconectar();
+                                                    //Registro en 
+                                                    DateTimeFormatter dtf5 = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+                                                    System.out.println("yyyy/MM/dd-> "+dtf5.format(LocalDateTime.now()));
+                                                    DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm:ss");
+                                                    System.out.println("HH:mm:ss-> " + dtf.format(LocalDateTime.now()));
+                                                    PreparedStatement registroLog = c.prepareStatement("INSERT INTO LOGS(NAME_USUARIO, ACCION, FECHA_ACCION, HORA_ACCION) values(?, ?, ?, ?)", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                                                    registroLog.setString(1, usuario);
+                                                    registroLog.setString(2, "Realizo el prestamo del equipo "+idEquipo+" en el laboratorio "+carrito.toString());
+                                                    registroLog.setString(3, dtf5.format(LocalDateTime.now()));
+                                                    registroLog.setString(4, dtf.format(LocalDateTime.now()));
+                                                    registroLog.execute();
+                                                    registroLog.close();
+                                                        
                                                     botonAlta.setEnabled(false);
                                                     botonActualizarAgregandoHuella.setEnabled(false);
                                                     botonVerificar.setEnabled(false);
@@ -1633,7 +1666,9 @@ public class ventanasMuestra extends javax.swing.JFrame{
                                         System.out.println("Hasta esta fecha estara penalizado"+fechaPenaliza);
                                         System.out.println();
                                         try{                                                                                        // Fecha de hoy   Fecha obtenida     hora actual     este se queda igual razon     se queda igual   igual   igual     fecha obtenida     hora actual  se queda igual                  
-                                            int resp = JOptionPane.showConfirmDialog(null, "Hasta esta fecha estara penalizado"+fechaPenaliza+"Desea confirmar esta fecha de penalización",//<- EL MENSAJE 
+                                            JLabel etiqueta = new JLabel("Hasta esta fecha estara penalizado"+fechaPenaliza+"Desea confirmar esta fecha de penalización");
+                                            etiqueta.setFont(new Font("Arial", Font.BOLD, 18));
+                                            int resp = JOptionPane.showConfirmDialog(null, etiqueta,//<- EL MENSAJE 
                                             "Alerta!"/*<- El título de la ventana*/, JOptionPane.YES_NO_OPTION/*Las opciones (si o no)*/, JOptionPane.WARNING_MESSAGE/*El tipo de ventana, en este caso WARNING*/);
                                             if (resp == 0){
                                                     PreparedStatement penalizaUser = c.prepareStatement("INSERT INTO PENALIZACIONES (EDO_PENALIZA,FECHA_INICIO, FECHA_FIN_PENALIZA, HORA_PENALIZA, LAB_PENALIZA, RAZON_PENALIZA,TIPO_PENALIZACION,MULTA,FK_NUM_CTA,DIA_DESPENALIZA,HORA_DESPENALIZA,LAB_DESPENALIZA) VALUES "
@@ -1732,6 +1767,18 @@ public class ventanasMuestra extends javax.swing.JFrame{
 
                                         JOptionPane.showMessageDialog(null, "Se ha registrado con éxito la devolución del equipo "+numComp, "Éxito", JOptionPane.INFORMATION_MESSAGE );
                                        // conexionConsulta.desconectar();
+                                        DateTimeFormatter dtf5 = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+                                        System.out.println("yyyy/MM/dd-> "+dtf5.format(LocalDateTime.now()));
+                                        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm:ss");
+                                        System.out.println("HH:mm:ss-> " + dtf.format(LocalDateTime.now()));
+                                        PreparedStatement registroLog = c.prepareStatement("INSERT INTO LOGS(NAME_USUARIO, ACCION, FECHA_ACCION, HORA_ACCION) values(?, ?, ?, ?)" , ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                                        registroLog.setString(1, usuario);
+                                        registroLog.setString(2, "Realizo la devolucion del equipo "+idEquipo+" en el laboratorio"+idLab);
+                                        registroLog.setString(3, dtf5.format(LocalDateTime.now()));
+                                        registroLog.setString(4, dtf.format(LocalDateTime.now()));
+                                        registroLog.execute();
+                                        registroLog.close();
+                                        
                                         Reclutador.clear();
                                         labelImagenHuella.setIcon(null);
                                         botonAlta.setEnabled(false);
@@ -1899,9 +1946,11 @@ public class ventanasMuestra extends javax.swing.JFrame{
                                         System.out.println(tiempoPenalizacion);
                                         System.out.println("Hasta esta fecha estara penalizado"+fechaPenaliza);
                                         System.out.println();
-                                        int resp = JOptionPane.showConfirmDialog(null, "Hasta esta fecha estara penalizado"+fechaPenaliza+"Desea confirmar esta fecha de penalización",//<- EL MENSAJE 
+                                        JLabel etiqueta = new JLabel("Hasta esta fecha estara penalizado:\n ***"+fechaPenaliza+"***\nDesea confirmar esta fecha de penalización");
+                                        etiqueta.setFont(new Font("Arial", Font.BOLD, 12));
+                                        int resp = JOptionPane.showConfirmDialog(null, etiqueta,//<- EL MENSAJE 
                                         "Alerta!"/*<- El título de la ventana*/, JOptionPane.YES_NO_OPTION/*Las opciones (si o no)*/, JOptionPane.WARNING_MESSAGE/*El tipo de ventana, en este caso WARNING*/);
-                                        if (resp == 0){
+                                        if (resp == 0){ // 0 es SI
                                             try{                                                                                        // Fecha de hoy   Fecha obtenida     hora actual     este se queda igual razon     se queda igual   igual   igual     fecha obtenida     hora actual  se queda igual                  
                                             PreparedStatement penalizaUser = c.prepareStatement("INSERT INTO PENALIZACIONES (EDO_PENALIZA,FECHA_INICIO, FECHA_FIN_PENALIZA, HORA_PENALIZA, LAB_PENALIZA, RAZON_PENALIZA,TIPO_PENALIZACION,MULTA,FK_NUM_CTA,DIA_DESPENALIZA,HORA_DESPENALIZA,LAB_DESPENALIZA) VALUES "
                                                     + "('1',?,?,?,?,?,?,?,?,?,?,?)");
@@ -1962,6 +2011,7 @@ public class ventanasMuestra extends javax.swing.JFrame{
                                                 penalizaUser.execute();
                                                 penalizaUser.close();
                                                 JOptionPane.showMessageDialog(null, "Se ha registrado la penalizacion", "Éxito", JOptionPane.INFORMATION_MESSAGE );
+                                                fechaPenaliza = datePenalizacion;
                                             }catch(SQLException e){
                                                 JOptionPane.showMessageDialog(null, "Ocurrió un error al registrar la penalización\nExcepción es "+e+" y su descripcion:"+e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE );
                                                  labelImagenHuella.setIcon(null);
@@ -1978,6 +2028,11 @@ public class ventanasMuestra extends javax.swing.JFrame{
                                 //{
                                     String observaciones = JOptionPane.showInputDialog(null, "Indique si tiene alguna observación respecto al equipo devuelto:", "Observaciones", JOptionPane.QUESTION_MESSAGE );
                                     //System.out.println("observaciones vale "+observaciones);
+                                    if(observaciones.equals("")){ //Si la observación queda vacia
+                                        //No se realiza nada
+                                    } else {
+                                        aumentoAmonestacion(observaciones, cuenta, idLab);
+                                    }
                                     
                                         try{
                                         //JOptionPane.showMessageDialog(null, "El usuario tiene asigando el equipo, hacer la sentencia de prestamo ", "Resultado", JOptionPane.INFORMATION_MESSAGE );
@@ -1998,7 +2053,19 @@ public class ventanasMuestra extends javax.swing.JFrame{
                                         liberarPrestamo.close();
 
                                         JOptionPane.showMessageDialog(null, "Se ha registrado con éxito la devolución del equipo "+numComp, "Éxito", JOptionPane.INFORMATION_MESSAGE );
-                                        conexionConsulta.desconectar();
+                                        //conexionConsulta.desconectar();
+                                        DateTimeFormatter dtf5 = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+                                        System.out.println("yyyy/MM/dd-> "+dtf5.format(LocalDateTime.now()));
+                                        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm:ss");
+                                        System.out.println("HH:mm:ss-> " + dtf.format(LocalDateTime.now()));
+                                        PreparedStatement registroLog = c.prepareStatement("INSERT INTO LOGS(NAME_USUARIO, ACCION, FECHA_ACCION, HORA_ACCION) values(?, ?, ?, ?)" , ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                                        registroLog.setString(1, usuario);
+                                        registroLog.setString(2, "Realizo la devolucion del equipo "+idEquipo+" en el laboratorio"+idLab);
+                                        registroLog.setString(3, dtf5.format(LocalDateTime.now()));
+                                        registroLog.setString(4, dtf.format(LocalDateTime.now()));
+                                        registroLog.execute();
+                                        registroLog.close();
+                                        
                                         botonAlta.setEnabled(false);
                                         botonActualizarAgregandoHuella.setEnabled(false);
                                         botonVerificar.setEnabled(true);
@@ -2042,6 +2109,125 @@ public class ventanasMuestra extends javax.swing.JFrame{
         }   
     }//fin metodo devolverCta()
     
+    
+    public void aumentoAmonestacion(String observaciones, String cuenta, String idLab){
+        Connection c = conexionConsulta.conectar();
+        try{
+            PreparedStatement consultaAmoestacion = c.prepareStatement("SELECT AMONESTACIONES, RAZON_AMONESTA FROM ALUMNOS WHERE NUM_CTA = ? ", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            consultaAmoestacion.setString(1, cuenta);
+            ResultSet rs = consultaAmoestacion.executeQuery();
+            if (rs.next()){
+                int numAmonestaciones = rs.getInt("AMONESTACIONES");
+                numAmonestaciones = numAmonestaciones + 1; 
+                String razonAmonesta = rs.getString("RAZON_AMONESTA");
+                if(numAmonestaciones == 3){ //Tiene tres amonestaciones
+                    PreparedStatement pstm = c.prepareStatement("SELECT FECHA_FIN_PENALIZA, ID_PENALIZACION, RAZON_PENALIZA FROM PENALIZACIONES WHERE FK_NUM_CTA = ? AND EDO_PENALIZA = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                    pstm.setString(1, cuenta);
+                    pstm.setString(2, "1");
+                    ResultSet res = pstm.executeQuery();
+                    if(res.next()){ // SI tiene una penalizacion
+                        String fechaFin = res.getString("FECHA_FIN_PENALIZA"); //Obtenemos la fecha hasta la que esta penalizado
+                        String idPenaliza = res.getString("ID_PENALIZACION");
+                        String mensaje = res.getString("RAZON_PENALIZA");
+                        mensaje.concat(",acumuló 3 obseraciones acumuladas");
+                        JDateChooser jd = new JDateChooser();
+                        String message ="Selecciona fecha:\nLa fecha de penalizacion registrada es:" +fechaFin+"\n RAZON DE AMONESTACION: "+razonAmonesta;
+                        Object[] params = {message,jd};
+                        String fPenalizacion = JOptionPane.showInputDialog(null,params,"Fecha Penalización",JOptionPane.OK_CANCEL_OPTION);
+                        String datePenalizacion="";
+                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                        datePenalizacion=sdf.format(((JDateChooser)params[1]).getDate());
+                        System.out.println("Fecha de termino de penalizacion "+ datePenalizacion);
+                        Calendar dateNow = Calendar.getInstance();
+                        String fechaNow = sdf.format(new Date());
+                        int hNow = dateNow.get(Calendar.HOUR_OF_DAY);
+                        String mNow = Integer.toString( dateNow.get(Calendar.MINUTE));
+                        if (mNow.length()==1){ mNow= "0"+mNow; }
+                        String sNow =  Integer.toString(dateNow.get(Calendar.SECOND));
+                        if (sNow.length()==1){ sNow= "0"+sNow; }
+                        String hourNow = Integer.toString(hNow)+":"+mNow+":"+sNow;
+                        try{
+                            PreparedStatement penalizaUser = c.prepareStatement("UPDATE PENALIZACIONES SET FECHA_FIN_PENALIZA = ?, DIA_DESPENALIZA = ?, RAZON_PENALIZA = ? WHERE ID_PENALIZACION = ?");
+                            penalizaUser.setString(1, datePenalizacion);
+                            penalizaUser.setString(2, datePenalizacion);
+                            penalizaUser.setString(3, mensaje);
+                            penalizaUser.setString(4, idPenaliza);
+                            penalizaUser.execute();
+                            penalizaUser.close();
+                            JOptionPane.showMessageDialog(null, "Se ha ACTUALIZADO la penalizacion", "Éxito", JOptionPane.INFORMATION_MESSAGE );
+                        }catch(SQLException e){
+                            JOptionPane.showMessageDialog(null, "Ocurrió un error al ACTUALIZAR la penalización\nExcepción es "+e+" y su descripcion:"+e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE );
+                             labelImagenHuella.setIcon(null);
+                        }
+                        
+                    } else { //Si no viene penalizado
+                        JDateChooser jd = new JDateChooser();
+                        String message ="Selecciona fecha";
+                        Object[] params = {message,jd};
+                        String fPenalizacion = JOptionPane.showInputDialog(null,params,"Fecha Penalización",JOptionPane.OK_CANCEL_OPTION);
+                        String datePenalizacion="";
+                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                        datePenalizacion=sdf.format(((JDateChooser)params[1]).getDate());
+                        System.out.println("Fecha de termino de penalizacion "+ datePenalizacion);
+                        Calendar dateNow = Calendar.getInstance();
+                        String fechaNow = sdf.format(new Date());
+                        int hNow = dateNow.get(Calendar.HOUR_OF_DAY);
+                        String mNow = Integer.toString( dateNow.get(Calendar.MINUTE));
+                        if (mNow.length()==1){ mNow= "0"+mNow; }
+                        String sNow =  Integer.toString(dateNow.get(Calendar.SECOND));
+                        if (sNow.length()==1){ sNow= "0"+sNow; }
+                        String hourNow = Integer.toString(hNow)+":"+mNow+":"+sNow;
+                        try{
+                            PreparedStatement penalizaUser = c.prepareStatement("INSERT INTO PENALIZACIONES (EDO_PENALIZA,FECHA_INICIO, FECHA_FIN_PENALIZA, HORA_PENALIZA, LAB_PENALIZA, RAZON_PENALIZA,TIPO_PENALIZACION,MULTA,FK_NUM_CTA,DIA_DESPENALIZA,HORA_DESPENALIZA,LAB_DESPENALIZA) VALUES "
+                                    + "('1',?,?,?,?,?,?,?,?,?,?,?)");
+                            penalizaUser.setString(1, fechaNow);
+                            penalizaUser.setString(2, datePenalizacion);
+                            penalizaUser.setString(3, hourNow);
+                            penalizaUser.setString(4, idLab);
+                            penalizaUser.setString(5, "El alumno acumuló 3 obseraciones acumuladas");
+                            penalizaUser.setString(6, "2");
+                            penalizaUser.setString(7, "0.0");
+                            penalizaUser.setString(8, cuenta);
+                            penalizaUser.setString(9, datePenalizacion);
+                            penalizaUser.setString(10,hourNow);
+                            penalizaUser.setString(11,"SIN LAB" );
+                            System.out.println(penalizaUser);
+                            penalizaUser.execute();
+                            penalizaUser.close();
+                            JOptionPane.showMessageDialog(null, "Se ha registrado la penalizacion", "Éxito", JOptionPane.INFORMATION_MESSAGE );
+                        }catch(SQLException e){
+                            JOptionPane.showMessageDialog(null, "Ocurrió un error al registrar la penalización\nExcepción es "+e+" y su descripcion:"+e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE );
+                             labelImagenHuella.setIcon(null);
+                        }
+                    }
+                } else if(numAmonestaciones > 3){
+                    String amonestaciones = Integer.toString(numAmonestaciones);
+                    if(razonAmonesta.equals("")){
+                        razonAmonesta.concat(observaciones);
+                    } else {
+                        razonAmonesta.concat(","+observaciones);
+                    }
+                    
+                    PreparedStatement amonestacionAumenta = c.prepareStatement("UPDATE ALUMNOS SET AMONESTACIONES = ?, RAZON_AMONESTA = ? WHERE NUM_CTA = ?");
+                    amonestacionAumenta.setString(1, amonestaciones);
+                    amonestacionAumenta.setString(2, razonAmonesta);
+                    amonestacionAumenta.setString(3, cuenta);
+                    amonestacionAumenta.execute();
+                    amonestacionAumenta.close();
+                    
+                }
+            }
+            
+            
+        } catch (SQLException e){
+            JOptionPane.showMessageDialog(null, "Ocurrió una excepción de tipo "+e+"\nSu descripcion:"+e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE );   
+        } finally{
+            
+        }
+        
+        
+    }
+    
     public String[] Obt_Laboratorio (){
         
         int tam = 50;
@@ -2061,15 +2247,41 @@ public class ventanasMuestra extends javax.swing.JFrame{
             }
             
         } catch (SQLException e) {
-            
             System.err.println("Error en la consulta:" + e.getMessage());
-            
         }
-        
         return ListaLaboratorio;
 
     }
     
+    public void cerrar (){
+        DateTimeFormatter dtf5 = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+        System.out.println("yyyy/MM/dd-> "+dtf5.format(LocalDateTime.now()));
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm:ss");
+        System.out.println("HH:mm:ss-> " + dtf.format(LocalDateTime.now()));
+        try{
+            this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+            addWindowListener (new WindowAdapter(){
+                public void windowClosing (WindowEvent e){
+                    Connection c = conexionConsulta.conectar();
+                    try (PreparedStatement registroLog = c.prepareStatement("INSERT INTO LOGS(NAME_USUARIO, ACCION, FECHA_ACCION, HORA_ACCION) values(?, ?, ?, ?)" , ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE)) {
+                        registroLog.setString(1, usuario);
+                        registroLog.setString(2, "Salio del sistema");
+                        registroLog.setString(3, dtf5.format(LocalDateTime.now()));
+                        registroLog.setString(4, dtf.format(LocalDateTime.now()));
+                        registroLog.execute();
+                    }catch (SQLException ex){
+                    JOptionPane.showMessageDialog(null, "Ocurrió un error al INSERTAR EN LOGS"+e, "Error", JOptionPane.ERROR_MESSAGE );
+                    }finally {
+                        System.exit(0);
+                    }
+                stop();
+                }
+            });
+            this.setVisible (true);
+        }catch (Exception e){
+            e.printStackTrace ();
+        }
+    }
   
     
    
@@ -2106,6 +2318,9 @@ public class ventanasMuestra extends javax.swing.JFrame{
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         addWindowListener(new java.awt.event.WindowAdapter() {
+            public void windowClosed(java.awt.event.WindowEvent evt) {
+                formWindowClosed(evt);
+            }
             public void windowClosing(java.awt.event.WindowEvent evt) {
                 formWindowClosing(evt);
             }
@@ -2460,7 +2675,23 @@ public class ventanasMuestra extends javax.swing.JFrame{
     private void botonSalirActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonSalirActionPerformed
         // TODO add your handling code here:
         conexionConsulta.desconectar();
-        System.exit(0); //sale del formulario
+        DateTimeFormatter dtf5 = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+        System.out.println("yyyy/MM/dd-> " + dtf5.format(LocalDateTime.now()));
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm:ss");
+        System.out.println("HH:mm:ss-> " + dtf.format(LocalDateTime.now()));
+        Connection c = conexionConsulta.conectar();
+        try (PreparedStatement registroLog = c.prepareStatement("INSERT INTO LOGS(NAME_USUARIO, ACCION, FECHA_ACCION, HORA_ACCION) values(?, ?, ?, ?)", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE)) {
+            registroLog.setString(1, usuario);
+            registroLog.setString(2, "Salio del sistema");
+            registroLog.setString(3, dtf5.format(LocalDateTime.now()));
+            registroLog.setString(4, dtf.format(LocalDateTime.now()));
+            registroLog.execute();
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(null, "Ocurrió un error al INSERTAR EN LOGS" + ex, "Error", JOptionPane.ERROR_MESSAGE);
+        } finally {
+            System.exit(0);
+        }
+        
     }//GEN-LAST:event_botonSalirActionPerformed
 
     private void botonDevolucionActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonDevolucionActionPerformed
@@ -2529,7 +2760,6 @@ public class ventanasMuestra extends javax.swing.JFrame{
 
     private void formWindowClosing(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosing
         // TODO add your handling code here:
-        stop();
     }//GEN-LAST:event_formWindowClosing
 
     private void botonActualizarArregloHuellasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonActualizarArregloHuellasActionPerformed
@@ -2559,6 +2789,11 @@ public class ventanasMuestra extends javax.swing.JFrame{
         
 
     }//GEN-LAST:event_administrarActionPerformed
+
+    private void formWindowClosed(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosed
+        // TODO add your handling code here:
+        cerrar();
+    }//GEN-LAST:event_formWindowClosed
 
     
     /**
