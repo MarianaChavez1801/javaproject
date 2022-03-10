@@ -113,6 +113,7 @@ public class CatalogoLaboratorios extends javax.swing.JDialog {
                 verificarStmt.setString(1, idLab);
                 ResultSet res2 = verificarStmt.executeQuery();
                 while(res2.next()){ //LD LX
+                    
                     String idLab2 = res2.getString("ID_LAB");
                     System.out.println(idLab2);
                     PreparedStatement verificarStmt2 = c.prepareStatement("SELECT ID_LAB FROM GRUPOS WHERE ID_LAB = ? AND ID_GRUPO = ? ", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
