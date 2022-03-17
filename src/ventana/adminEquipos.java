@@ -4,6 +4,7 @@
  */
 package ventana;
 
+import com.toedter.calendar.JDateChooser;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.ByteArrayInputStream;
@@ -22,6 +23,7 @@ import project2.conexionConsulta;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Level;
@@ -190,16 +192,13 @@ public class adminEquipos extends javax.swing.JFrame {
             //String nombreCorto = JOptionPane.showInputDialog("Escriba el Nombre corto del laboratorio/carrito a mostrar:").toUpperCase();
             Object lab = JOptionPane.showInputDialog(null, "Seleccione el laboratorio del que se mostraran los equipos existentes", "Mostrar equipos", JOptionPane.QUESTION_MESSAGE, null, ListaLaboratorio, "01" );
             String nombreCorto = lab.toString();
-            PreparedStatement mostrarStmt = c.prepareStatement("SELECT L.ID_LAB, L.NOMBRE_LAB, E.ID_EQUIPO, E.NUM_COMP, E.UTILIZABLE FROM EQUIPOS E, LABORATORIOS L WHERE L.ID_LAB = E.ID_LAB AND E.ID_LAB = ? ORDER BY E.NUM_COMP" , ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            PreparedStatement mostrarStmt = c.prepareStatement("SELECT L.ID_LAB, L.NOMBRE_LAB, E.ID_EQUIPO, E.NUM_COMP, E.UTILIZABLE, E.OBS_EQUIPO FROM EQUIPOS E, LABORATORIOS L WHERE L.ID_LAB = E.ID_LAB AND E.ID_LAB = ? ORDER BY E.NUM_COMP" , ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
             mostrarStmt.setString(1, nombreCorto);
-
             try{
-
                 //mostrarStmt.setString(1, nombreCorto);
                 ResultSet rs1 = mostrarStmt.executeQuery();
                 EnviarTexto("Estos son los registros en la tabla Carritos");
-                EnviarTexto("ID_LAB    NOMBRE_LAB      ID_EQUIPO      NUM_COMP      UTILIZABLE");
-
+                EnviarTexto("ID_LAB    NOMBRE_LAB      ID_EQUIPO      NUM_COMP      UTILIZABLE      OBS_EQUIPO");
                 rs1.beforeFirst(); 
                 if(rs1.next()){
                     rs1.beforeFirst(); 
@@ -209,36 +208,25 @@ public class adminEquipos extends javax.swing.JFrame {
                     String idEquipo = rs1.getString("ID_EQUIPO");
                     String numComp = rs1.getString("NUM_COMP");
                     String utilizable = rs1.getString("UTILIZABLE");
-                    EnviarTexto(idCarrito +"      " +nomCarrito +"      " + idEquipo +"                     " + numComp+"                     " + utilizable);
-
+                    String obsEquipo = rs1.getString("OBS_EQUIPO");
+                    EnviarTexto(idCarrito +"      " +nomCarrito +"      " + idEquipo +"                     " + numComp+"                     " + utilizable+"    " + obsEquipo);
                     } 
                 }else{
                     JOptionPane.showMessageDialog(null, "Este laboratorio no tiene ningún equipo registrado\n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
                 }
-
-
-
-
             }catch(SQLException ex){
-
                 JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un error al tratar de mostrar los datos!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
-
             }finally{
-
                 conexionConsulta.desconectar();
             }
-        } else {
-            
-            PreparedStatement mostrarStmt = c.prepareStatement("SELECT L.ID_LAB, L.NOMBRE_LAB, E.ID_EQUIPO, E.NUM_COMP, E.UTILIZABLE FROM EQUIPOS E, LABORATORIOS L WHERE L.ID_LAB = E.ID_LAB AND E.ID_LAB = ?" , ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+        } else {            
+            PreparedStatement mostrarStmt = c.prepareStatement("SELECT L.ID_LAB, L.NOMBRE_LAB, E.ID_EQUIPO, E.NUM_COMP, E.UTILIZABLE, E.OBS_EQUIPO FROM EQUIPOS E, LABORATORIOS L WHERE L.ID_LAB = E.ID_LAB AND E.ID_LAB = ? ORDER BY E.NUM_COMP" , ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
             mostrarStmt.setString(1, nombreLab);
-
             try{
-
                 //mostrarStmt.setString(1, nombreCorto);
                 ResultSet rs1 = mostrarStmt.executeQuery();
                 EnviarTexto("Estos son los registros en la tabla Carritos");
-                EnviarTexto("ID_LAB    NOMBRE_LAB      ID_EQUIPO      NUM_COMP      UTILIZABLE");
-
+                EnviarTexto("ID_LAB    NOMBRE_LAB      ID_EQUIPO      NUM_COMP      UTILIZABLE      OBS_EQUIPO");
                 rs1.beforeFirst(); 
                 if(rs1.next()){
                     while (rs1.next()) {
@@ -247,22 +235,16 @@ public class adminEquipos extends javax.swing.JFrame {
                     String idEquipo = rs1.getString("ID_EQUIPO");
                     String numComp = rs1.getString("NUM_COMP");
                     String utilizable = rs1.getString("UTILIZABLE");
-                    EnviarTexto(idCarrito +"      " +nomCarrito +"      " + idEquipo +"                     " + numComp+"                     " + utilizable);
+                    String obsEquipo = rs1.getString("OBS_EQUIPO");
+                    EnviarTexto(idCarrito +"      " +nomCarrito +"      " + idEquipo +"                     " + numComp+"                     " + utilizable+"    " + obsEquipo);
 
                     } 
                 }else{
                     JOptionPane.showMessageDialog(null, "Este laboratorio no tiene ningún equipo registrado\n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
                 }
-
-
-
-
             }catch(SQLException ex){
-
                 JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un error al tratar de mostrar los datos!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
-
             }finally{
-
                 conexionConsulta.desconectar();
             }
             
@@ -853,7 +835,7 @@ public class adminEquipos extends javax.swing.JFrame {
         }
     }
     
-    public void inutilizarLaboratorio(){
+    public String inutilizarLaboratorio(){
         Connection c = conexionConsulta.conectar();
         String ListaLaboratorio[] = Obt_Laboratorio();
         int elementosActualizados = 0;
@@ -862,7 +844,7 @@ public class adminEquipos extends javax.swing.JFrame {
         String nombreCorto = lab.toString();
         PreparedStatement actualizarStmt2;
         try {
-            int resp = JOptionPane.showConfirmDialog(null, "Si ACEPTA ESTE LABORATORIO QUEDARA COMO INUTILIZABLE y deberá CREAR uno NUEVO, ¿Desea continuar?",//<- EL MENSAJE 
+            int resp = JOptionPane.showConfirmDialog(null, "Si ACEPTA ESTE LABORATORIO QUEDARA COMO INUTILIZABLE, ¿Desea continuar?",//<- EL MENSAJE 
             "Alerta!"/*<- El título de la ventana*/, JOptionPane.YES_NO_OPTION/*Las opciones (si o no)*/, JOptionPane.WARNING_MESSAGE/*El tipo de ventana, en este caso WARNING*/);
             if (resp == 0){// 0 es SI
                 actualizarStmt2 = c.prepareStatement("UPDATE LABORATORIOS SET UTILIZABLE = ? WHERE ID_LAB = ? ");
@@ -870,22 +852,61 @@ public class adminEquipos extends javax.swing.JFrame {
                 actualizarStmt2.setString(2, nombreCorto);
                 elementosActualizados = elementosActualizados + actualizarStmt2.executeUpdate();
                 actualizarStmt2.close();
-                String carritoNuevo = guardarCarrito();
+                /*String carritoNuevo = guardarCarrito();
                 if(carritoNuevo.equals("")){
                 } else {
-                    sustituirLaboratorio(nombreCorto, carritoNuevo);
+                    sustituirLaboratorio(nombreCorto, carritoNuevo); //Se creaba un nuevo laboratorio al inutilizar uno
+                }*/
+                if(elementosActualizados > 0){
+                    int labActualizados = elementosActualizados;
+                    PreparedStatement actualizarEquiposStmt = c.prepareStatement("UPDATE EQUIPOS SET UTILIZABLE = ? WHERE ID_LAB = ? ");
+                    actualizarEquiposStmt.setInt(1, 0);
+                    actualizarEquiposStmt.setString(2, nombreCorto);
+                    elementosActualizados = elementosActualizados + actualizarEquiposStmt.executeUpdate();
+                    actualizarEquiposStmt.close();
+                    if(elementosActualizados > 0){
+                        int equiposActualizados = elementosActualizados - labActualizados;
+                        int count = 0;
+                        PreparedStatement mostrarStmt = c.prepareStatement("SELECT ID_GRUPO, ID_USUARIO FROM GRUPOLABORATORIO WHERE ID_LAB = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                        mostrarStmt.setString(1, nombreCorto);
+                        ResultSet rs1 = mostrarStmt.executeQuery();
+                        while (rs1.next()) {
+                            String idGrupo = rs1.getString("ID_GRUPO");                            
+                            try (
+                                    PreparedStatement actualizarStmt3 = c.prepareStatement("DELETE FROM GRUPOLABORATORIO WHERE ID_GRUPO = ? AND ID_LAB = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE)) {
+                                    actualizarStmt3.setString(1, idGrupo);
+                                    actualizarStmt3.setString(2, nombreCorto);
+                                    count = count + actualizarStmt3.executeUpdate();                                     
+                            } catch (SQLException exc) {
+                                JOptionPane.showMessageDialog(null, "Ocurrió un error al tratar de INUTILIZAR este equipo (Sustitucion en GRUPOS)" + exc, "Error", JOptionPane.ERROR_MESSAGE);
+                                return "";
+                            }                            
+                        }
+                        if (count > 0) {
+                            JOptionPane.showMessageDialog(null, "Se marco como INUTILIZABLE el LABORATORIO:" + nombreCorto + "\nLaboratorios actualizados: " + labActualizados + "\nEquipos actualizados: " + equiposActualizados + "\nGrupos actualizados: " + count, "Exito", JOptionPane.INFORMATION_MESSAGE);
+                            return nombreCorto;
+                        } else {
+                            JOptionPane.showMessageDialog(null, "Se marco como INUTILIZABLE el LABORATORIO:" + nombreCorto + "\nLaboratorios actualizados: " + labActualizados + "\nEquipos actualizados: " + equiposActualizados + "\nGrupos actualizados: " + count, "Exito", JOptionPane.INFORMATION_MESSAGE);
+                            return nombreCorto;
+                        }                        
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Ocurrió un error al tratar de INUTILIZAR EQUIPOS DE ESTE LABORATORIO", "Error", JOptionPane.ERROR_MESSAGE);
+                        return "";
+                    }                                                            
+                } else {
+                JOptionPane.showMessageDialog(null, "Ocurrió un error al tratar de INUTILIZAR este LABORATORIO", "Error", JOptionPane.ERROR_MESSAGE );
+                return "";
                 }
             } else {
-                JOptionPane.showMessageDialog(null, "Ocurrió un error al tratar de INUTILIZAR este equipo", "Error", JOptionPane.ERROR_MESSAGE );
-            }
-            
-            
-            
+                textArea.append("Proceso Cancelado por el ADMINISTRADOR");
+                return "";
+            }                                    
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(null, "Ocurrió un error al tratar de INUTILIZAR este equipo", "Error", JOptionPane.ERROR_MESSAGE );
-        }
-        
-        
+            return "";
+        } finally{
+            conexionConsulta.desconectar();
+        }                
     }
     
     public void sustituirLaboratorio(String idLabActual, String carritoNuevo){
@@ -922,7 +943,188 @@ public class adminEquipos extends javax.swing.JFrame {
         
         
     }
+    
+    public void mostrarLogs() throws SQLException{
+        textArea.append("----------------------------------------------------------------------------------------------------------------------------------------------------\n");
+        Connection c = conexionConsulta.conectar();
+        PreparedStatement mostrarStmt = c.prepareStatement("SELECT ID_LOG, NAME_USUARIO, ACCION, FECHA_ACCION, HORA_ACCION FROM LOGS WHERE FECHA_ACCION = CURDATE()" , ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+        
+        try{
+            ResultSet rs1 = mostrarStmt.executeQuery();
+            EnviarTexto("Estos son los USUARIOS registrados con su correspondiente GRUPO");
+            EnviarTexto("ID_LOG     NAME_USUARIO     ACCION     FECHA_ACCION     HORA_ACCION");
+            if(rs1.next()){
+                rs1.beforeFirst(); 
+                while (rs1.next()) {
+                String idUsuario = rs1.getString("ID_LOG");
+                String nomUsuario = rs1.getString("NAME_USUARIO");
+                String tipoUsuario = rs1.getString("ACCION");
+                String idGrupo = rs1.getString("FECHA_ACCION");
+                String idLab = rs1.getString("HORA_ACCION");
+                EnviarTexto(idUsuario +"                  " +tipoUsuario+"                  " +nomUsuario+"                   " + idGrupo+"                     " + idLab);
+                
+                }
+                
+            }else{
+                JOptionPane.showMessageDialog(null, "No hay LOGS ni USUARIOS registrados \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
+            }   
+        }catch(SQLException ex){
+            JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un error al tratar de mostrar los datos!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
+        }finally{ 
+            conexionConsulta.desconectar();
+        }
+    }
+    
+    //Este modulo se utilizó para actualizar multiples campos de fecha con valor default "0000-00-00", lo cual causaba un error
+    /*public void modificarFechas(){
+        Connection c = conexionConsulta.conectar();
+        int count = 0;
+        int act = 0;
+        try{
+            PreparedStatement mostrarStmt = c.prepareStatement("SELECT ID_EQUIPO, FECHA_REUTILIZA FROM EQUIPOS" , ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            //mostrarStmt.setString(1, "0000-00-00");
+            ResultSet rs1 = mostrarStmt.executeQuery();
+            EnviarTexto("Estos son los Equipos registrados ");
+            EnviarTexto("ID_EQUIPO       FECHA_REUTILIZA");
+            if(rs1.next()){
+                rs1.beforeFirst(); 
+                while (rs1.next()) {
+                String idUsuario = rs1.getString("ID_EQUIPO");
+                String nomUsuario = rs1.getString("FECHA_REUTILIZA");
+                    if(nomUsuario.equals("0000-00-00")){
+                        count ++;
+                        EnviarTexto(idUsuario +"                  " +nomUsuario+" / "+count);
+                        PreparedStatement updateStmt = c.prepareStatement("UPDATE EQUIPOS SET FECHA_REUTILIZA = ? WHERE ID_EQUIPO = ?;" , ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                        updateStmt.setString(1, "1111-11-11" );
+                        updateStmt.setString(2, idUsuario);
+                        act = act + updateStmt.executeUpdate();
+                    }
+                }
+                
+                JOptionPane.showMessageDialog(null, "Los registros actualizados son en total "+act, "Resultado", JOptionPane.INFORMATION_MESSAGE );
+                
+            }else{
+                JOptionPane.showMessageDialog(null, "No hay LOGS ni USUARIOS registrados \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
+            }   
+        }catch(SQLException ex){
+            JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un error al tratar de mostrar los datos!!! \n Intentelo nuevamente \n"+ex, "Error", JOptionPane.ERROR_MESSAGE );
+        }finally{ 
+            conexionConsulta.desconectar();
+        }
+        
+    }*/
 
+    public String agregarObservacionEquipo(boolean Penaliza){
+        if(Penaliza == false){
+            Connection c = conexionConsulta.conectar();
+            String ListaLaboratorio[] = Obt_Laboratorio();
+            //String nombreCorto = JOptionPane.showInputDialog("Escriba el Nombre corto del laboratorio/carrito a mostrar:").toUpperCase();
+            Object lab = JOptionPane.showInputDialog(null, "Seleccione el laboratorio del que se INUTILIZARAN los equipos existentes", "Mostrar equipos", JOptionPane.QUESTION_MESSAGE, null, ListaLaboratorio, "01" );
+            String nombreCorto = lab.toString();
+            CatalogoEquipos ch = new CatalogoEquipos(this, true, nombreCorto, usuario, true);
+            ch.setVisible(true);
+            return nombreCorto;
+        } else {
+            Connection c = conexionConsulta.conectar();
+            String ListaLaboratorio[] = Obt_Laboratorio();
+            //String nombreCorto = JOptionPane.showInputDialog("Escriba el Nombre corto del laboratorio/carrito a mostrar:").toUpperCase();
+            Object lab = JOptionPane.showInputDialog(null, "Seleccione el laboratorio del que se INUTILIZARAN los equipos existentes", "Mostrar equipos", JOptionPane.QUESTION_MESSAGE, null, ListaLaboratorio, "01" );
+            String nombreCorto = lab.toString();
+            CatalogoEquipos ch = new CatalogoEquipos(this, true, nombreCorto, usuario, true);
+            ch.setVisible(true);
+            return nombreCorto;
+        }   
+    }
+    
+    public void penalizarAlumno(){
+        
+        String cuenta = JOptionPane.showInputDialog("Número de Cuenta o RFC:");
+        if(cuenta.equals("")){
+            JOptionPane.showMessageDialog(null, "Porfavor Igrese un NUMERO DE CUENATA/RFC", "Error", JOptionPane.ERROR_MESSAGE);    
+            penalizarAlumno();                    
+        } else {
+            Connection c = conexionConsulta.conectar();
+            try{
+            PreparedStatement identificarStmt = c.prepareStatement("SELECT NUM_CTA, NOMBRE, ESTADO,CONSENTIMIENTO, IMG_HUELLA FROM ALUMNOS WHERE NUM_CTA = ?");
+            identificarStmt.setString(1, cuenta);
+            ResultSet rs = identificarStmt.executeQuery();
+            if(rs.next()){
+                String nombre = rs.getString("NOMBRE");
+                JOptionPane.showConfirmDialog(null, "El numero de cuenta "+cuenta+" está registrado a nombre de: "+nombre+"\n Verifique con el alumno", "Identificación con NUMERO DE CUENTA", JOptionPane.OK_CANCEL_OPTION );
+
+                String mensaje = "Daño a equipo";
+                int resp = JOptionPane.showConfirmDialog(null, "¿Desea registrar OBSERVACIONES en el equipo?",//<- EL MENSAJE 
+                        "Alerta!"/*<- El título de la ventana*/, JOptionPane.YES_NO_OPTION/*Las opciones (si o no)*/, JOptionPane.WARNING_MESSAGE/*El tipo de ventana, en este caso WARNING*/);
+                //System.out.println(resp); // SI = 0, NO = 1
+                if (resp == 0) { //Si responde si
+                    agregarObservacionEquipo(true);
+                }
+
+                JDateChooser jd = new JDateChooser();
+                String message = "Selecciona fecha";
+                Object[] params = {message, jd};
+                String fPenalizacion = JOptionPane.showInputDialog(null, params, "Fecha Penalización", JOptionPane.OK_CANCEL_OPTION);
+                String datePenalizacion = "";
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                datePenalizacion = sdf.format(((JDateChooser) params[1]).getDate());
+                System.out.println("Fecha de termino de penalizacion " + datePenalizacion);
+                Calendar dateNow = Calendar.getInstance();
+                String fechaNow = sdf.format(new Date());
+                int hNow = dateNow.get(Calendar.HOUR_OF_DAY);
+                String mNow = Integer.toString(dateNow.get(Calendar.MINUTE));
+                if (mNow.length() == 1) {
+                    mNow = "0" + mNow;
+                }
+                String sNow = Integer.toString(dateNow.get(Calendar.SECOND));
+                if (sNow.length() == 1) {
+                    sNow = "0" + sNow;
+                }
+                String hourNow = Integer.toString(hNow) + ":" + mNow + ":" + sNow;
+                try {
+                    PreparedStatement penalizaUser = c.prepareStatement("INSERT INTO PENALIZACIONES (EDO_PENALIZA,FECHA_INICIO, FECHA_FIN_PENALIZA, HORA_PENALIZA, LAB_PENALIZA, RAZON_PENALIZA,TIPO_PENALIZACION,MULTA,FK_NUM_CTA,DIA_DESPENALIZA,HORA_DESPENALIZA,LAB_DESPENALIZA) VALUES "
+                            + "('1',?,?,?,?,?,?,?,?,?,?,?)");
+                    penalizaUser.setString(1, fechaNow);
+                    penalizaUser.setString(2, datePenalizacion);
+                    penalizaUser.setString(3, hourNow);
+                    penalizaUser.setString(4, "DEPTO TEC");
+                    penalizaUser.setString(5, mensaje);
+                    penalizaUser.setString(6, "2");
+                    penalizaUser.setString(7, "0.0");
+                    penalizaUser.setString(8, cuenta);
+                    penalizaUser.setString(9, datePenalizacion);
+                    penalizaUser.setString(10, hourNow);
+                    penalizaUser.setString(11, "SIN LAB");
+                    System.out.println(penalizaUser);
+                    penalizaUser.execute();
+                    penalizaUser.close();
+                    JOptionPane.showMessageDialog(null, "Se ha registrado la penalizacion", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                    //fechaPenaliza = datePenalizacion;
+                    
+                    DateTimeFormatter dtf5 = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+                    System.out.println("yyyy/MM/dd-> " + dtf5.format(LocalDateTime.now()));
+                    DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm:ss");
+                    System.out.println("HH:mm:ss-> " + dtf.format(LocalDateTime.now()));
+                    PreparedStatement registroLog = c.prepareStatement("INSERT INTO LOGS(NAME_USUARIO, ACCION, FECHA_ACCION, HORA_ACCION) values(?, ?, ?, ?)", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                    registroLog.setString(1, usuario);
+                    registroLog.setString(2, "Penalizó al alumno: "+nombre+"con numero de cuenta"+cuenta);
+                    registroLog.setString(3, dtf5.format(LocalDateTime.now()));
+                    registroLog.setString(4, dtf.format(LocalDateTime.now()));
+                    registroLog.execute();
+                    registroLog.close();
+
+                } catch (SQLException e) {
+                    JOptionPane.showMessageDialog(null, "Ocurrió un error al registrar la penalización\nExcepción es " + e + " y su descripcion:" + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                } finally {
+                    conexionConsulta.desconectar();
+                }
+            } else {
+                JOptionPane.showMessageDialog(null, "Ocurrió un error al registrar la penalización\n El alumno NO EXISTE", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+            } catch (SQLException e) {
+                JOptionPane.showMessageDialog(null, "Ocurrió un error al registrar la penalización\nExcepción es " + e + " y su descripcion:" + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -933,6 +1135,7 @@ public class adminEquipos extends javax.swing.JFrame {
     private void initComponents() {
 
         jPanel1 = new javax.swing.JPanel();
+        jButton6 = new javax.swing.JButton();
         jScrollPane1 = new javax.swing.JScrollPane();
         textArea = new javax.swing.JTextArea();
         botonLimpiar = new javax.swing.JButton();
@@ -940,7 +1143,6 @@ public class adminEquipos extends javax.swing.JFrame {
         jTabbedPane1 = new javax.swing.JTabbedPane();
         jPanel2 = new javax.swing.JPanel();
         botonCarritoNuevo = new javax.swing.JButton();
-        jButton3 = new javax.swing.JButton();
         jButton7 = new javax.swing.JButton();
         jButton9 = new javax.swing.JButton();
         jPanel3 = new javax.swing.JPanel();
@@ -953,11 +1155,13 @@ public class adminEquipos extends javax.swing.JFrame {
         jButton8 = new javax.swing.JButton();
         jButton10 = new javax.swing.JButton();
         jButton4 = new javax.swing.JButton();
+        jButton3 = new javax.swing.JButton();
         jPanel5 = new javax.swing.JPanel();
         jButton11 = new javax.swing.JButton();
         jButton15 = new javax.swing.JButton();
         jButton16 = new javax.swing.JButton();
         jButton18 = new javax.swing.JButton();
+        jButton2 = new javax.swing.JButton();
         botonPrestamos = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
@@ -973,15 +1177,27 @@ public class adminEquipos extends javax.swing.JFrame {
             }
         });
 
+        jButton6.setText("Penalizar");
+        jButton6.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton6ActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 133, Short.MAX_VALUE)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jButton6, javax.swing.GroupLayout.DEFAULT_SIZE, 147, Short.MAX_VALUE)
+                .addContainerGap())
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 74, Short.MAX_VALUE)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addComponent(jButton6)
+                .addGap(0, 50, Short.MAX_VALUE))
         );
 
         textArea.setColumns(20);
@@ -1009,13 +1225,6 @@ public class adminEquipos extends javax.swing.JFrame {
             }
         });
 
-        jButton3.setText("Actualizar datos laboratorio");
-        jButton3.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton3ActionPerformed(evt);
-            }
-        });
-
         jButton7.setText("Inutilizar laboratorio");
         jButton7.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -1039,9 +1248,8 @@ public class adminEquipos extends javax.swing.JFrame {
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(jButton9, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jButton7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jButton3, javax.swing.GroupLayout.DEFAULT_SIZE, 189, Short.MAX_VALUE)
-                    .addComponent(botonCarritoNuevo, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addContainerGap(211, Short.MAX_VALUE))
+                    .addComponent(botonCarritoNuevo, javax.swing.GroupLayout.DEFAULT_SIZE, 189, Short.MAX_VALUE))
+                .addContainerGap(204, Short.MAX_VALUE))
         );
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1052,9 +1260,7 @@ public class adminEquipos extends javax.swing.JFrame {
                 .addComponent(jButton9)
                 .addGap(18, 18, 18)
                 .addComponent(jButton7)
-                .addGap(18, 18, 18)
-                .addComponent(jButton3)
-                .addContainerGap(192, Short.MAX_VALUE))
+                .addContainerGap(235, Short.MAX_VALUE))
         );
 
         jTabbedPane1.addTab("LABORATORIOS", jPanel2);
@@ -1144,6 +1350,13 @@ public class adminEquipos extends javax.swing.JFrame {
             }
         });
 
+        jButton3.setText("Agregar Observaciones");
+        jButton3.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton3ActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
         jPanel4.setLayout(jPanel4Layout);
         jPanel4Layout.setHorizontalGroup(
@@ -1154,7 +1367,8 @@ public class adminEquipos extends javax.swing.JFrame {
                     .addComponent(jButton10, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jButton8, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jButton5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jButton4, javax.swing.GroupLayout.DEFAULT_SIZE, 189, Short.MAX_VALUE))
+                    .addComponent(jButton4, javax.swing.GroupLayout.DEFAULT_SIZE, 189, Short.MAX_VALUE)
+                    .addComponent(jButton3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap(211, Short.MAX_VALUE))
         );
         jPanel4Layout.setVerticalGroup(
@@ -1168,7 +1382,9 @@ public class adminEquipos extends javax.swing.JFrame {
                 .addComponent(jButton8)
                 .addGap(18, 18, 18)
                 .addComponent(jButton5)
-                .addContainerGap(192, Short.MAX_VALUE))
+                .addGap(18, 18, 18)
+                .addComponent(jButton3)
+                .addContainerGap(150, Short.MAX_VALUE))
         );
 
         jTabbedPane1.addTab("EQUIPOS", jPanel4);
@@ -1230,6 +1446,13 @@ public class adminEquipos extends javax.swing.JFrame {
 
         jTabbedPane1.addTab("USUARIOS", jPanel5);
 
+        jButton2.setText("Historial Logs");
+        jButton2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton2ActionPerformed(evt);
+            }
+        });
+
         botonPrestamos.setText("Volver a Prestamos");
         botonPrestamos.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
@@ -1250,21 +1473,24 @@ public class adminEquipos extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
                         .addContainerGap()
+                        .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 142, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addComponent(jTabbedPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 408, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(18, 18, Short.MAX_VALUE)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                         .addComponent(botonPrestamos, javax.swing.GroupLayout.PREFERRED_SIZE, 147, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(botonLimpiar)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                         .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 74, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addContainerGap())
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 8, Short.MAX_VALUE)
                         .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 583, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(30, 30, 30))))
+                        .addGap(30, 30, 30))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(6, 6, 6)
+                        .addComponent(botonLimpiar, javax.swing.GroupLayout.PREFERRED_SIZE, 118, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addContainerGap())))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1275,14 +1501,16 @@ public class adminEquipos extends javax.swing.JFrame {
                     .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jButton1)
-                            .addComponent(botonLimpiar))
+                            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                .addComponent(jButton1)
+                                .addComponent(botonPrestamos))
+                            .addComponent(jButton2))
                         .addGap(0, 0, Short.MAX_VALUE))))
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 386, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(32, 32, 32)
-                .addComponent(botonPrestamos)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(botonLimpiar)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
@@ -1312,7 +1540,28 @@ public class adminEquipos extends javax.swing.JFrame {
 
     private void jButton7ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton7ActionPerformed
         // TODO add your handling code here:
-        inutilizarLaboratorio();
+        String laboratorioInutilizado = inutilizarLaboratorio();
+        if(laboratorioInutilizado != ""){
+            try{
+                mostrarCarritos(); //ejecuta el metodo para guardar huella y persona en bd
+            }catch(SQLException ex){
+                //Logger.getLogger(ventanasMuestra.class.getName()).log(Level.SEVERE, null, ex );
+                java.util.logging.Logger.getLogger(adminEquipos.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            }
+            try{
+                mostrarEquipos(laboratorioInutilizado); //ejecuta el metodo para guardar huella y persona en bd
+            }catch(SQLException ex){
+                //Logger.getLogger(ventanasMuestra.class.getName()).log(Level.SEVERE, null, ex );
+                java.util.logging.Logger.getLogger(adminEquipos.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            }
+            try {
+                // TODO add your handling code here:
+                mostrarGrupos();
+            } catch (SQLException ex) {
+                Logger.getLogger(adminEquipos.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        
     }//GEN-LAST:event_jButton7ActionPerformed
 
     private void jButton11ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton11ActionPerformed
@@ -1469,10 +1718,6 @@ public class adminEquipos extends javax.swing.JFrame {
         ch.setVisible(true); 
     }//GEN-LAST:event_jButton16ActionPerformed
 
-    private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jButton3ActionPerformed
-
     private void jButton8ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton8ActionPerformed
         // TODO add your handling code here:
         String lab = inutilizarEquipo(false);
@@ -1493,6 +1738,31 @@ public class adminEquipos extends javax.swing.JFrame {
         // TODO add your handling code here:
         cerrar();
     }//GEN-LAST:event_formWindowClosing
+
+    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
+        try {
+            // TODO add your handling code here:
+            mostrarLogs();
+        } catch (SQLException ex) {
+            Logger.getLogger(adminEquipos.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }//GEN-LAST:event_jButton2ActionPerformed
+
+    private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
+        // TODO add your handling code here:
+        String lab =  agregarObservacionEquipo(false);
+        try {
+            mostrarEquipos(lab); //ejecuta el metodo para guardar huella y persona en bd
+        } catch (SQLException ex) {
+            //Logger.getLogger(ventanasMuestra.class.getName()).log(Level.SEVERE, null, ex );
+            java.util.logging.Logger.getLogger(adminEquipos.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        }
+    }//GEN-LAST:event_jButton3ActionPerformed
+
+    private void jButton6ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton6ActionPerformed
+        // TODO add your handling code here:
+        penalizarAlumno();        
+    }//GEN-LAST:event_jButton6ActionPerformed
 
     /**
      * @param args the command line arguments
@@ -1539,9 +1809,11 @@ public class adminEquipos extends javax.swing.JFrame {
     private javax.swing.JButton jButton16;
     private javax.swing.JButton jButton17;
     private javax.swing.JButton jButton18;
+    private javax.swing.JButton jButton2;
     private javax.swing.JButton jButton3;
     private javax.swing.JButton jButton4;
     private javax.swing.JButton jButton5;
+    private javax.swing.JButton jButton6;
     private javax.swing.JButton jButton7;
     private javax.swing.JButton jButton8;
     private javax.swing.JButton jButton9;

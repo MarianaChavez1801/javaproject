@@ -45,6 +45,7 @@ public class formularioGrupo extends javax.swing.JFrame {
         nombre = new String(usuarioIngresa.getText());
         String password = "";
         password = new String(passIngresa.getPassword());
+        String grupoNom = "";
         if ((nombre != "") || (password != "")){
             //Establece los valores para la sentencia SQL
             try{
@@ -73,6 +74,13 @@ public class formularioGrupo extends javax.swing.JFrame {
                             ingresaAdmin = true;     
                         } else if( rs3.next()){
                             grupo = rs3.getString("ID_GRUPO");
+                            System.out.println("ESTE ES EL GRUPO:  "+grupo);
+                            PreparedStatement consultarStmt4 = c.prepareStatement("SELECT NOM_GRUPO FROM GRUPOS WHERE ID_GRUPO = ? ");
+                            consultarStmt4.setString(1, grupo);                            
+                            ResultSet rs4 = consultarStmt4.executeQuery();
+                            if(rs4.next()){
+                                grupoNom = rs4.getString("NOM_GRUPO");
+                            }
                         } else {
                             JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un error al tratar de igresar, ESTE USUARIO NO PERTENECE A NINGUN GRUPO!!!  \n Inténtelo nuevamente con otro USUARIO", "Error", JOptionPane.ERROR_MESSAGE );
                             return false;
@@ -82,10 +90,10 @@ public class formularioGrupo extends javax.swing.JFrame {
                                 JOptionPane.showMessageDialog(null, "Usted a INGRESADO con exito \n USTED INGRESO COMO ADMINISTRADOR", "Éxito", JOptionPane.INFORMATION_MESSAGE );
                                 break;
                             case "P":
-                                JOptionPane.showMessageDialog(null, "Usted a INGRESADO con exito \n Esta ingresando al GRUPO: " + grupo+"\nINGRESO COMO PRESTADOR", "Éxito", JOptionPane.INFORMATION_MESSAGE );
+                                JOptionPane.showMessageDialog(null, "Usted a INGRESADO con exito \n Esta ingresando al GRUPO: " + grupoNom, "Éxito", JOptionPane.INFORMATION_MESSAGE );
                                 break;
                             case "T":
-                                JOptionPane.showMessageDialog(null, "Usted a INGRESADO con exito \n Esta ingresando al GRUPO: " + grupo+"\nINGRESO COMO TEMPORAL", "Éxito", JOptionPane.INFORMATION_MESSAGE );
+                                JOptionPane.showMessageDialog(null, "Usted a INGRESADO con exito \n Esta ingresando al GRUPO: " + grupoNom, "Éxito", JOptionPane.INFORMATION_MESSAGE );
                                 break;
                         }
                         consultarStmt.close();

@@ -92,7 +92,9 @@ public class ventanasMuestra extends javax.swing.JFrame{
             JOptionPane.showMessageDialog(null, "Imposible modificar el tema visual", "LookAndFeel inválido", JOptionPane.ERROR_MESSAGE);
         }
         initComponents();
-        setLocationRelativeTo(null); //para colocar el jframe en el centro de la pantalla   
+        System.err.println("ESTE ES EL GRUPO"+grupo);
+        setLocationRelativeTo(null); //para colocar el jframe en el centro de la pantalla  
+        this.setExtendedState(6);
         dispose();
     }
     
@@ -765,12 +767,31 @@ public class ventanasMuestra extends javax.swing.JFrame{
                             String fechaFinPena = bpe.getString("FECHA_FIN_PENALIZA");
                             String razonPena = bpe.getString("RAZON_PENALIZA");
                             String multaPena = bpe.getString("MULTA");
-                            JOptionPane.showConfirmDialog(null, "No puede realizarse préstamo en PC Puma al usuario\n"+nombre+"\nNúmero de Cuenta/RFC: "+cuenta+"\nRazón: "+razonPena+"\nDesde el día "+fechaIniPena+"\nHasta el "+fechaFinPena, "Usuario Penalizado", JOptionPane.PLAIN_MESSAGE, JOptionPane.ERROR_MESSAGE );                            
+                            String idPena = bpe.getString("ID_PENALIZACION");
+                            DateTimeFormatter dtf5 = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                            String fechaHoy = dtf5.format(LocalDateTime.now());
+                            System.err.println("HOY"+fechaHoy);
+                            SimpleDateFormat sdformat = new SimpleDateFormat("yyyy-MM-dd");
+                            Date date1 = sdformat.parse(fechaFinPena);
+                            System.err.println(fechaFinPena);
+                            Date date2 = sdformat.parse(fechaHoy);
                             confirmaNumero = 0; //para que considere al usuario como encontrado y confirmado 
-                            EnviarTexto("Proceso de Préstamo inviable por penalizacion a usuario con cuenta "+cuenta);
-                            labelImagenHuella.setIcon(null);
-                            //start(); //vuelve a inicializar la captura de huella y lo indica
-                            break;   
+                            if (date2.after(date1)) {
+                                PreparedStatement cambiarPenalizaciones = c.prepareStatement("UPDATE PENALIZACIONES SET EDO_PENALIZA = ? WHERE ID_PENALIZACION = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                                cambiarPenalizaciones.setString(1, "0");
+                                cambiarPenalizaciones.setString(2, idPena);
+                                int cambioPenaliza = cambiarPenalizaciones.executeUpdate(); 
+                                if (cambioPenaliza > 0){
+                                    //JOptionPane.showMessageDialog(null, "Se actualizo el estado de penalización", "Éxito", JOptionPane.INFORMATION_MESSAGE );
+                                    prestamo();
+                                }
+                            } else {
+                                JOptionPane.showConfirmDialog(null, "No puede realizarse préstamo en PC Puma al usuario\n"+nombre+"\nNúmero de Cuenta/RFC: "+cuenta+"\nRazón: "+razonPena+"\nDesde el día "+fechaIniPena+"\nHasta el "+fechaFinPena, "Usuario Penalizado", JOptionPane.PLAIN_MESSAGE, JOptionPane.ERROR_MESSAGE );                                                            
+                                EnviarTexto("Proceso de Préstamo inviable por penalizacion a usuario con cuenta "+cuenta);
+                                labelImagenHuella.setIcon(null);
+                                //start(); //vuelve a inicializar la captura de huella y lo indica
+                                break; 
+                            }    
                         }
                         else
                         { //si no hay penalizacion    
@@ -855,6 +876,19 @@ public class ventanasMuestra extends javax.swing.JFrame{
 
                                                         //Time t = new Time();
                                                         //String hora = t.getTime();
+                                                        
+                                                        PreparedStatement ObsEquipo = c.prepareStatement("SELECT OBS_EQUIPO FROM EQUIPOS WHERE ID_EQUIPO = ?");
+                                                        ObsEquipo.setString(1, idEquipo);
+                                                        ResultSet re = ObsEquipo.executeQuery();
+                                                        if(re.next()){
+                                                            String obsEquipo = re.getString("OBS_EQUIPO");
+                                                            if(obsEquipo == ""){
+                                                                System.out.println("Equipo sin observaciones");
+                                                            } else {
+                                                                JOptionPane.showMessageDialog(null, "Este EQUIPO Presenta estas observaciones: \n"+obsEquipo, "Aviso", JOptionPane.INFORMATION_MESSAGE );                                                        
+                                                            }
+                                                            
+                                                        }
 
                                                         //JOptionPane.showMessageDialog(null, "El equipo seleccionado esta disponible, hacer la sentencia de prestamo ", "Resultado", JOptionPane.INFORMATION_MESSAGE );
                                                         PreparedStatement prestarEquipo = c.prepareStatement("INSERT INTO PRESTAMOS(NUM_CTA, ID_LAB, ID_EQUIPO, HORA_INICIO, HORA_FIN, FECHA) values(?, ?, ?, ?, ADDTIME(?, '02:00:00'), CURDATE())");
@@ -872,7 +906,7 @@ public class ventanasMuestra extends javax.swing.JFrame{
                                                         registrarAsignado.execute();
                                                         registrarAsignado.close();
 
-                                                        JOptionPane.showMessageDialog(null, "El préstamo se autorizó y se registró correctamente", "Éxito", JOptionPane.INFORMATION_MESSAGE );
+                                                        JOptionPane.showMessageDialog(null, "El préstamo se autorizó y se registró correctamente", "Éxito", JOptionPane.INFORMATION_MESSAGE );                                                        
                                                         //conexionConsulta.desconectar();
                                                         //Registro de actividad en LOGS
                                                         DateTimeFormatter dtf5 = DateTimeFormatter.ofPattern("yyyy/MM/dd");
@@ -963,9 +997,11 @@ public class ventanasMuestra extends javax.swing.JFrame{
     }//fin metodo prestamo
     
     
-    public void prestamo2() throws Exception //funcion que es para el prestamo alternativo (con numero de cuenta)
+    public void prestamo2(String cuenta) throws Exception //funcion que es para el prestamo alternativo (con numero de cuenta)
     {   
-        String cuenta = JOptionPane.showInputDialog("Número de Cuenta o RFC:");
+        if(cuenta == ""){
+            cuenta = JOptionPane.showInputDialog("Número de Cuenta o RFC:");
+        } 
         if(cuenta != null){
             try
             {
@@ -992,17 +1028,37 @@ public class ventanasMuestra extends javax.swing.JFrame{
                     }
                     else{
                     //se buscara si hay penalizacion en Pc Puma o no
-                        PreparedStatement buscarPenalizacion = c.prepareStatement("SELECT FECHA_INICIO AS INICIO, FECHA_FIN_PENALIZA AS FIN, RAZON_PENALIZA AS RAZON FROM PENALIZACIONES WHERE FK_NUM_CTA = ? AND TIPO_PENALIZACION = '2' AND EDO_PENALIZA = '1'" ,ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                        PreparedStatement buscarPenalizacion = c.prepareStatement("SELECT ID_PENALIZACION AS PENALIZA, FECHA_INICIO AS INICIO, FECHA_FIN_PENALIZA AS FIN, RAZON_PENALIZA AS RAZON FROM PENALIZACIONES WHERE FK_NUM_CTA = ? AND TIPO_PENALIZACION = '2' AND EDO_PENALIZA = '1'" ,ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
                         buscarPenalizacion.setString(1, cuenta);
                         ResultSet bpe = buscarPenalizacion.executeQuery();
                         if(bpe.next()){
                             String fechaIniPena = bpe.getString("INICIO");
                             String fechaFinPena = bpe.getString("FIN");
                             String razonPena = bpe.getString("RAZON");
+                            String idPena = bpe.getString("PENALIZA");
                             //JOptionPane.showConfirmDialog(null, "El numero de cuenta "+cuenta+" está registrado a nombre de: "+nombre+"\nEl Usuario tiene una Penalizacion de PC Puma desde el dia "+fecha_inicio_penaliza+" y con fecha de fin "+fecha_fin_penaliza+".\nPor la razon de: "+razon_penaliza+"\n", "Penalizacion", JOptionPane.PLAIN_MESSAGE, JOptionPane.ERROR_MESSAGE );
-                            JOptionPane.showConfirmDialog(null, "No puede realizarse préstamo en PC Puma al usuario\n"+nombre+"\nNúmero de Cuenta/RFC: "+cuenta+"\nRazón: "+razonPena+"\nDesde el "+fechaIniPena+"\nHasta el "+fechaFinPena, "Usuario Penalizado", JOptionPane.PLAIN_MESSAGE, JOptionPane.ERROR_MESSAGE );
-                            conexionConsulta.desconectar();
-                            EnviarTexto("Proceso de Préstamo inviable por penalizacion a usuario con cuenta "+cuenta);
+                            DateTimeFormatter dtf5 = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                            String fechaHoy = dtf5.format(LocalDateTime.now());
+                            System.err.println("HOY" + fechaHoy);
+                            SimpleDateFormat sdformat = new SimpleDateFormat("yyyy-MM-dd");
+                            Date date1 = sdformat.parse(fechaFinPena);
+                            System.err.println(fechaFinPena);
+                            Date date2 = sdformat.parse(fechaHoy);
+                            //confirmaNumero = 0; //para que considere al usuario como encontrado y confirmado 
+                            if (date2.after(date1)) {
+                                PreparedStatement cambiarPenalizaciones = c.prepareStatement("UPDATE PENALIZACIONES SET EDO_PENALIZA = ? WHERE ID_PENALIZACION = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                                cambiarPenalizaciones.setString(1, "0");
+                                cambiarPenalizaciones.setString(2, idPena);
+                                int cambioPenaliza = cambiarPenalizaciones.executeUpdate();
+                                if (cambioPenaliza > 0) {
+                                    //JOptionPane.showMessageDialog(null, "Se actualizo el estado de penalización", "Éxito", JOptionPane.INFORMATION_MESSAGE );
+                                    prestamo2(cuenta);
+                                }
+                            } else {
+                                JOptionPane.showConfirmDialog(null, "No puede realizarse préstamo en PC Puma al usuario\n" + nombre + "\nNúmero de Cuenta/RFC: " + cuenta + "\nRazón: " + razonPena + "\nDesde el " + fechaIniPena + "\nHasta el " + fechaFinPena, "Usuario Penalizado", JOptionPane.PLAIN_MESSAGE, JOptionPane.ERROR_MESSAGE);
+                                conexionConsulta.desconectar();
+                                EnviarTexto("Proceso de Préstamo inviable por penalizacion a usuario con cuenta " + cuenta);                               
+                            }
                         }
                         else{ //no tiene penalizacion
                             //JOptionPane.showMessageDialog(null, "El número de cuenta "+cuenta+"\n corresponde a "+nombre, "Usuario válido", JOptionPane.INFORMATION_MESSAGE );
@@ -1032,7 +1088,7 @@ public class ventanasMuestra extends javax.swing.JFrame{
                                         JOptionPane.showMessageDialog(null, "El usuario "+nombre+"\n y clave "+cuenta+" ha solicitado prestamo de equipo "+nPD.getRow()+" veces en el día", "Alerta", JOptionPane.INFORMATION_MESSAGE );
                                         }
                                         //FIN Revision de numero de prestamos en el dia
-                                    
+
                                     //String equipo = JOptionPane.showInputDialog("Proporcione la clave del equipo para préstamo").toUpperCase();
                                     // ---- >Object carrito = JOptionPane.showInputDialog(null, "Seleccione el laboratorio movil", "Préstamo de equipo", JOptionPane.QUESTION_MESSAGE, null, new Object[] {"L01","L02","CB03","C01","C02","C03","C04","C05","C06"}, "01" );
                                     //Object carrito = laboratorio;
@@ -1040,7 +1096,7 @@ public class ventanasMuestra extends javax.swing.JFrame{
                                     //String equipo = carrito.toString();
                                     String ListaLaboratorio[] = Obt_Laboratorio();
                                     Object carrito = JOptionPane.showInputDialog(null, "Seleccione el laboratorio movil", "Prestamo de equipo", JOptionPane.QUESTION_MESSAGE, null, ListaLaboratorio, "01" );
-                                        
+
                                     if(carrito != null)
                                     {
                                         //Object numEquipo = JOptionPane.showInputDialog(null, "Indique el número de quipo", "Préstamo de equipo", JOptionPane.QUESTION_MESSAGE, null, new Object[] {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30"}, "01" );
@@ -1072,6 +1128,20 @@ public class ventanasMuestra extends javax.swing.JFrame{
                                                     //Time t = new Time();
                                                     //String hora = t.getTime();
                                                     //JOptionPane.showMessageDialog(null, "El equipo seleccionado esta disponible, hacer la sentencia de prestamo ", "Resultado", JOptionPane.INFORMATION_MESSAGE );
+
+                                                    PreparedStatement ObsEquipo = c.prepareStatement("SELECT OBS_EQUIPO FROM EQUIPOS WHERE ID_EQUIPO = ?");
+                                                    ObsEquipo.setString(1, idEquipo);
+                                                    ResultSet re = ObsEquipo.executeQuery();
+                                                    if (re.next()) {
+                                                        String obsEquipo = re.getString("OBS_EQUIPO");
+                                                        if (obsEquipo == "") {
+                                                            System.out.println("Equipo sin observaciones");
+                                                        } else {
+                                                            JOptionPane.showMessageDialog(null, "Este EQUIPO Presenta estas observaciones: \n" + obsEquipo, "Aviso", JOptionPane.INFORMATION_MESSAGE);
+                                                        }
+
+                                                    }
+
                                                     PreparedStatement prestarEquipo = c.prepareStatement("INSERT INTO PRESTAMOS(NUM_CTA, ID_LAB, ID_EQUIPO, HORA_INICIO, HORA_FIN, FECHA) values(?, ?, ?, ?, ADDTIME(?, '02:00:00'), CURDATE())");
                                                     prestarEquipo.setString(1, cuenta);
                                                     prestarEquipo.setString(2, carrito.toString());
@@ -1101,7 +1171,7 @@ public class ventanasMuestra extends javax.swing.JFrame{
                                                     registroLog.setString(4, dtf.format(LocalDateTime.now()));
                                                     registroLog.execute();
                                                     registroLog.close();
-                                                        
+
                                                     botonAlta.setEnabled(false);
                                                     botonActualizarAgregandoHuella.setEnabled(false);
                                                     botonVerificar.setEnabled(false);
@@ -1157,6 +1227,7 @@ public class ventanasMuestra extends javax.swing.JFrame{
         }else{ //si el numero de cuenta no se propocion*
             JOptionPane.showMessageDialog(null, "No se recibió número de cuenta ni RFC\n Proporcione alguno", "Error", JOptionPane.WARNING_MESSAGE);
         }
+        
     }//fin metodo prestamo2
     
     
@@ -1665,8 +1736,10 @@ public class ventanasMuestra extends javax.swing.JFrame{
                                         System.out.println(tiempoPenalizacion);
                                         System.out.println("Hasta esta fecha estara penalizado"+fechaPenaliza);
                                         System.out.println();
-                                        try{                                                                                        // Fecha de hoy   Fecha obtenida     hora actual     este se queda igual razon     se queda igual   igual   igual     fecha obtenida     hora actual  se queda igual                  
-                                            JLabel etiqueta = new JLabel("Hasta esta fecha estara penalizado"+fechaPenaliza+"Desea confirmar esta fecha de penalización");
+                                        try{   // Fecha de hoy   Fecha obtenida     hora actual     este se queda igual razon     se queda igual   igual   igual     fecha obtenida     hora actual  se queda igual                  
+                                            DateTimeFormatter isoFechaMuestra = DateTimeFormatter.ofPattern("dd/MM/yyyy");                                            
+                                            String fechaPenalizaMuestra = today.plusDays(tiempoPenalizacion).format(isoFechaMuestra);
+                                            JLabel etiqueta = new JLabel("Hasta esta fecha estara penalizado"+fechaPenalizaMuestra+"Desea confirmar esta fecha de penalización");
                                             etiqueta.setFont(new Font("Arial", Font.BOLD, 18));
                                             int resp = JOptionPane.showConfirmDialog(null, etiqueta,//<- EL MENSAJE 
                                             "Alerta!"/*<- El título de la ventana*/, JOptionPane.YES_NO_OPTION/*Las opciones (si o no)*/, JOptionPane.WARNING_MESSAGE/*El tipo de ventana, en este caso WARNING*/);
@@ -1946,7 +2019,9 @@ public class ventanasMuestra extends javax.swing.JFrame{
                                         System.out.println(tiempoPenalizacion);
                                         System.out.println("Hasta esta fecha estara penalizado"+fechaPenaliza);
                                         System.out.println();
-                                        JLabel etiqueta = new JLabel("Hasta esta fecha estara penalizado:\n ***"+fechaPenaliza+"***\nDesea confirmar esta fecha de penalización");
+                                        DateTimeFormatter isoFechaMuestra = DateTimeFormatter.ofPattern("dd/MM/yyyy");                                            
+                                        String fechaPenalizaMuestra = today.plusDays(tiempoPenalizacion).format(isoFechaMuestra);
+                                        JLabel etiqueta = new JLabel("Hasta esta fecha estara penalizado:\n ***"+fechaPenalizaMuestra+"***\nDesea confirmar esta fecha de penalización");
                                         etiqueta.setFont(new Font("Arial", Font.BOLD, 12));
                                         int resp = JOptionPane.showConfirmDialog(null, etiqueta,//<- EL MENSAJE 
                                         "Alerta!"/*<- El título de la ventana*/, JOptionPane.YES_NO_OPTION/*Las opciones (si o no)*/, JOptionPane.WARNING_MESSAGE/*El tipo de ventana, en este caso WARNING*/);
@@ -2229,7 +2304,7 @@ public class ventanasMuestra extends javax.swing.JFrame{
     }
     
     public String[] Obt_Laboratorio (){
-        
+        System.err.println("LLEANR LABS");
         int tam = 50;
         String ListaLaboratorio[] = new String [tam];
         int n = 0;
@@ -2241,6 +2316,7 @@ public class ventanasMuestra extends javax.swing.JFrame{
             ResultSet res = pstm.executeQuery();
             while(res.next()){
                 ListaLaboratorio[n] = res.getString("ID_LAB");
+                System.err.println("Labbbbbbbb");
                 //System.out.println(ListaLaboratorio[n].toString());
                 n ++;
                 
@@ -2303,20 +2379,34 @@ public class ventanasMuestra extends javax.swing.JFrame{
         jPanel1 = new javax.swing.JPanel();
         labelImagenHuella = new javax.swing.JLabel();
         jPanel2 = new javax.swing.JPanel();
-        botonVerificar = new javax.swing.JButton();
+        jPanel3 = new javax.swing.JPanel();
         botonIdentificar = new javax.swing.JButton();
-        botonPrestamo = new javax.swing.JButton();
-        botonDevolucion = new javax.swing.JButton();
+        botonVerificar = new javax.swing.JButton();
+        jLabel2 = new javax.swing.JLabel();
+        jPanel4 = new javax.swing.JPanel();
         botonAlta = new javax.swing.JButton();
         botonActualizarAgregandoHuella = new javax.swing.JButton();
-        botonSalir = new javax.swing.JButton();
-        botonPrestamo2 = new javax.swing.JButton();
+        jLabel4 = new javax.swing.JLabel();
+        jPanel6 = new javax.swing.JPanel();
+        botonDevolucion = new javax.swing.JButton();
         botonDevolucionCta = new javax.swing.JButton();
-        botonLimpiar = new javax.swing.JButton();
+        jLabel8 = new javax.swing.JLabel();
+        jPanel8 = new javax.swing.JPanel();
         botonActualizarArregloHuellas = new javax.swing.JButton();
+        botonLimpiar = new javax.swing.JButton();
         administrar = new javax.swing.JButton();
+        botonSalir = new javax.swing.JButton();
+        jPanel7 = new javax.swing.JPanel();
+        botonPrestamo2 = new javax.swing.JButton();
+        botonPrestamo = new javax.swing.JButton();
+        jLabel7 = new javax.swing.JLabel();
+        jLabel6 = new javax.swing.JLabel();
+        jLabel3 = new javax.swing.JLabel();
+        jLabel5 = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setBackground(new java.awt.Color(138, 196, 255));
+        setExtendedState(6);
         addWindowListener(new java.awt.event.WindowAdapter() {
             public void windowClosed(java.awt.event.WindowEvent evt) {
                 formWindowClosed(evt);
@@ -2328,197 +2418,351 @@ public class ventanasMuestra extends javax.swing.JFrame{
                 formWindowOpened(evt);
             }
         });
+        getContentPane().setLayout(null);
 
+        textArea.setBackground(new java.awt.Color(221, 234, 234));
         textArea.setColumns(20);
         textArea.setRows(5);
+        textArea.setBorder(new javax.swing.border.SoftBevelBorder(javax.swing.border.BevelBorder.RAISED));
         jScrollPane2.setViewportView(textArea);
 
-        botonVerificar.setText("Verificar");
-        botonVerificar.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                botonVerificarActionPerformed(evt);
-            }
-        });
+        getContentPane().add(jScrollPane2);
+        jScrollPane2.setBounds(490, 170, 850, 320);
 
-        botonIdentificar.setText("Identificar");
-        botonIdentificar.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                botonIdentificarActionPerformed(evt);
-            }
-        });
+        jPanel1.setBackground(new java.awt.Color(153, 189, 191));
+        jPanel1.setForeground(java.awt.SystemColor.activeCaptionBorder);
 
-        botonPrestamo.setText("Prestamo");
-        botonPrestamo.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                botonPrestamoActionPerformed(evt);
-            }
-        });
-
-        botonDevolucion.setText("Devolucion");
-        botonDevolucion.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                botonDevolucionActionPerformed(evt);
-            }
-        });
-
-        botonAlta.setText("Alta");
-        botonAlta.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                botonAltaActionPerformed(evt);
-            }
-        });
-
-        botonActualizarAgregandoHuella.setText("Modificar");
-        botonActualizarAgregandoHuella.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                botonActualizarAgregandoHuellaActionPerformed(evt);
-            }
-        });
-
-        botonSalir.setText("Salir");
-        botonSalir.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                botonSalirActionPerformed(evt);
-            }
-        });
-
-        botonPrestamo2.setText("Prestamo CTA");
-        botonPrestamo2.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                botonPrestamo2ActionPerformed(evt);
-            }
-        });
-
-        botonDevolucionCta.setText("Devolucion CTA");
-        botonDevolucionCta.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                botonDevolucionCtaActionPerformed(evt);
-            }
-        });
-
-        botonLimpiar.setText("Limpiar");
-        botonLimpiar.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                botonLimpiarActionPerformed(evt);
-            }
-        });
-
-        botonActualizarArregloHuellas.setText("Actualizar");
-        botonActualizarArregloHuellas.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                botonActualizarArregloHuellasActionPerformed(evt);
-            }
-        });
-
-        administrar.setText("Ingresar de nuevo");
-        administrar.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                administrarActionPerformed(evt);
-            }
-        });
-
-        javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
-        jPanel2.setLayout(jPanel2Layout);
-        jPanel2Layout.setHorizontalGroup(
-            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel2Layout.createSequentialGroup()
-                .addGap(18, 18, 18)
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(botonAlta, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(botonPrestamo, javax.swing.GroupLayout.DEFAULT_SIZE, 94, Short.MAX_VALUE)
-                            .addComponent(botonVerificar, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                        .addGap(18, 18, 18))
-                    .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                            .addComponent(botonSalir, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(botonDevolucion, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 106, Short.MAX_VALUE)
-                            .addComponent(botonActualizarArregloHuellas, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(botonDevolucionCta, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(botonPrestamo2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(botonActualizarAgregandoHuella, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(botonIdentificar, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(botonLimpiar, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addGap(15, 15, 15))
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(administrar)
-                .addGap(57, 57, 57))
-        );
-        jPanel2Layout.setVerticalGroup(
-            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel2Layout.createSequentialGroup()
-                .addGap(18, 18, 18)
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(botonActualizarAgregandoHuella)
-                    .addComponent(botonAlta))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(botonVerificar)
-                    .addComponent(botonIdentificar))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(botonPrestamo2)
-                    .addComponent(botonPrestamo))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(botonDevolucion)
-                    .addComponent(botonDevolucionCta))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(botonActualizarArregloHuellas)
-                .addGap(29, 29, 29)
-                .addComponent(administrar)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(botonSalir)
-                    .addComponent(botonLimpiar))
-                .addGap(39, 39, 39))
-        );
+        labelImagenHuella.setBackground(new java.awt.Color(255, 255, 255));
+        labelImagenHuella.setForeground(java.awt.SystemColor.activeCaption);
+        labelImagenHuella.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(labelImagenHuella, javax.swing.GroupLayout.PREFERRED_SIZE, 386, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(21, 21, 21)
+                .addComponent(labelImagenHuella, javax.swing.GroupLayout.DEFAULT_SIZE, 399, Short.MAX_VALUE)
                 .addContainerGap())
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(labelImagenHuella, javax.swing.GroupLayout.PREFERRED_SIZE, 282, javax.swing.GroupLayout.PREFERRED_SIZE)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(labelImagenHuella, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addContainerGap())
         );
 
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
-        getContentPane().setLayout(layout);
-        layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addComponent(jScrollPane2)
-                .addContainerGap())
-            .addGroup(layout.createSequentialGroup()
+        getContentPane().add(jPanel1);
+        jPanel1.setBounds(30, 170, 430, 310);
+
+        jPanel2.setBackground(new java.awt.Color(212, 224, 222));
+        jPanel2.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+
+        jPanel3.setBackground(java.awt.SystemColor.controlHighlight);
+        jPanel3.setBorder(javax.swing.BorderFactory.createEtchedBorder());
+
+        botonIdentificar.setText("Identificar con huella");
+        botonIdentificar.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        botonIdentificar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                botonIdentificarActionPerformed(evt);
+            }
+        });
+
+        botonVerificar.setText("Verificar registro con #cta/RFC");
+        botonVerificar.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        botonVerificar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                botonVerificarActionPerformed(evt);
+            }
+        });
+
+        jLabel2.setText("Identificación de Usuarios");
+
+        javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
+        jPanel3.setLayout(jPanel3Layout);
+        jPanel3Layout.setHorizontalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel3Layout.createSequentialGroup()
+                .addGap(76, 76, 76)
+                .addComponent(jLabel2)
+                .addContainerGap(77, Short.MAX_VALUE))
+            .addGroup(jPanel3Layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(26, Short.MAX_VALUE))
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(botonVerificar, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(botonIdentificar, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap())
         );
-        layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addGap(102, 102, 102)
-                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+        jPanel3Layout.setVerticalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel3Layout.createSequentialGroup()
+                .addComponent(jLabel2)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 357, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(19, Short.MAX_VALUE))
+                .addComponent(botonIdentificar, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(botonVerificar, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
         );
+
+        jPanel4.setBackground(java.awt.SystemColor.controlHighlight);
+        jPanel4.setBorder(javax.swing.BorderFactory.createEtchedBorder());
+
+        botonAlta.setText("Alta");
+        botonAlta.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        botonAlta.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                botonAltaActionPerformed(evt);
+            }
+        });
+
+        botonActualizarAgregandoHuella.setText("Actualizar huella");
+        botonActualizarAgregandoHuella.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        botonActualizarAgregandoHuella.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                botonActualizarAgregandoHuellaActionPerformed(evt);
+            }
+        });
+
+        jLabel4.setText("Administracion de Usuarios");
+
+        javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
+        jPanel4.setLayout(jPanel4Layout);
+        jPanel4Layout.setHorizontalGroup(
+            jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
+                .addContainerGap(81, Short.MAX_VALUE)
+                .addComponent(jLabel4)
+                .addGap(67, 67, 67))
+            .addGroup(jPanel4Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(botonActualizarAgregandoHuella, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(botonAlta, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap())
+        );
+        jPanel4Layout.setVerticalGroup(
+            jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
+                .addComponent(jLabel4)
+                .addGap(18, 18, 18)
+                .addComponent(botonAlta, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(botonActualizarAgregandoHuella, javax.swing.GroupLayout.PREFERRED_SIZE, 24, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
+        );
+
+        jPanel6.setBackground(java.awt.SystemColor.controlHighlight);
+        jPanel6.setBorder(javax.swing.BorderFactory.createEtchedBorder());
+
+        botonDevolucion.setText("Devolucion");
+        botonDevolucion.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        botonDevolucion.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                botonDevolucionActionPerformed(evt);
+            }
+        });
+
+        botonDevolucionCta.setText("Devolucion CTA");
+        botonDevolucionCta.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        botonDevolucionCta.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                botonDevolucionCtaActionPerformed(evt);
+            }
+        });
+
+        jLabel8.setText("Devoluciones");
+
+        javax.swing.GroupLayout jPanel6Layout = new javax.swing.GroupLayout(jPanel6);
+        jPanel6.setLayout(jPanel6Layout);
+        jPanel6Layout.setHorizontalGroup(
+            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel6Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(botonDevolucion, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(botonDevolucionCta, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap())
+            .addGroup(jPanel6Layout.createSequentialGroup()
+                .addGap(81, 81, 81)
+                .addComponent(jLabel8)
+                .addContainerGap(132, Short.MAX_VALUE))
+        );
+        jPanel6Layout.setVerticalGroup(
+            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel6Layout.createSequentialGroup()
+                .addComponent(jLabel8)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(botonDevolucion, javax.swing.GroupLayout.PREFERRED_SIZE, 24, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(botonDevolucionCta, javax.swing.GroupLayout.PREFERRED_SIZE, 24, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
+        );
+
+        jPanel8.setBackground(java.awt.SystemColor.controlHighlight);
+        jPanel8.setBorder(javax.swing.BorderFactory.createEtchedBorder());
+
+        botonActualizarArregloHuellas.setText("Recargar base de Datos");
+        botonActualizarArregloHuellas.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        botonActualizarArregloHuellas.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                botonActualizarArregloHuellasActionPerformed(evt);
+            }
+        });
+
+        botonLimpiar.setText("Reset");
+        botonLimpiar.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        botonLimpiar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                botonLimpiarActionPerformed(evt);
+            }
+        });
+
+        administrar.setText("Ingresar de nuevo");
+        administrar.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        administrar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                administrarActionPerformed(evt);
+            }
+        });
+
+        botonSalir.setText("Salir");
+        botonSalir.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        botonSalir.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                botonSalirActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout jPanel8Layout = new javax.swing.GroupLayout(jPanel8);
+        jPanel8.setLayout(jPanel8Layout);
+        jPanel8Layout.setHorizontalGroup(
+            jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel8Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(administrar, javax.swing.GroupLayout.PREFERRED_SIZE, 153, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(54, 54, 54)
+                .addComponent(botonActualizarArregloHuellas, javax.swing.GroupLayout.PREFERRED_SIZE, 133, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 487, Short.MAX_VALUE)
+                .addComponent(botonLimpiar, javax.swing.GroupLayout.PREFERRED_SIZE, 153, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(78, 78, 78)
+                .addComponent(botonSalir, javax.swing.GroupLayout.PREFERRED_SIZE, 153, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
+        );
+        jPanel8Layout.setVerticalGroup(
+            jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel8Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(botonSalir, javax.swing.GroupLayout.DEFAULT_SIZE, 28, Short.MAX_VALUE)
+                    .addComponent(botonLimpiar, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(botonActualizarArregloHuellas, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(administrar, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap())
+        );
+
+        jPanel7.setBackground(java.awt.SystemColor.controlHighlight);
+        jPanel7.setBorder(javax.swing.BorderFactory.createEtchedBorder());
+
+        botonPrestamo2.setText("Prestamo con #cta/RFC");
+        botonPrestamo2.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        botonPrestamo2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                botonPrestamo2ActionPerformed(evt);
+            }
+        });
+
+        botonPrestamo.setText("Prestamo");
+        botonPrestamo.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        botonPrestamo.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                botonPrestamoActionPerformed(evt);
+            }
+        });
+
+        jLabel7.setText("Préstamos");
+
+        javax.swing.GroupLayout jPanel7Layout = new javax.swing.GroupLayout(jPanel7);
+        jPanel7.setLayout(jPanel7Layout);
+        jPanel7Layout.setHorizontalGroup(
+            jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel7Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(botonPrestamo2, javax.swing.GroupLayout.DEFAULT_SIZE, 610, Short.MAX_VALUE)
+                    .addComponent(botonPrestamo, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap())
+            .addGroup(jPanel7Layout.createSequentialGroup()
+                .addGap(77, 77, 77)
+                .addComponent(jLabel7)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+        jPanel7Layout.setVerticalGroup(
+            jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel7Layout.createSequentialGroup()
+                .addComponent(jLabel7)
+                .addGap(18, 18, 18)
+                .addComponent(botonPrestamo2, javax.swing.GroupLayout.PREFERRED_SIZE, 22, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(botonPrestamo, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
+        );
+
+        javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
+        jPanel2.setLayout(jPanel2Layout);
+        jPanel2Layout.setHorizontalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addGap(46, 46, 46)
+                        .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(18, 18, 18)
+                        .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(18, 18, 18)
+                        .addComponent(jPanel7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(18, 18, 18)
+                        .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addGap(28, 28, 28)
+                        .addComponent(jPanel8, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+        jPanel2Layout.setVerticalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addGap(18, 18, 18)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                        .addComponent(jPanel7, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(jPanel6, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jPanel8, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(38, 38, 38))
+        );
+
+        getContentPane().add(jPanel2);
+        jPanel2.setBounds(28, 503, 1310, 200);
+
+        jLabel6.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        jLabel6.setIcon(new javax.swing.ImageIcon(getClass().getResource("/ventana/titulo.jpeg"))); // NOI18N
+        jLabel6.setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
+        jLabel6.setDebugGraphicsOptions(javax.swing.DebugGraphics.NONE_OPTION);
+        jLabel6.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        getContentPane().add(jLabel6);
+        jLabel6.setBounds(0, 0, 1360, 160);
+
+        jLabel3.setBackground(new java.awt.Color(255, 102, 102));
+        jLabel3.setIcon(new javax.swing.ImageIcon(getClass().getResource("/ventana/extrafondo.jpg"))); // NOI18N
+        getContentPane().add(jLabel3);
+        jLabel3.setBounds(0, 0, 1360, 750);
+
+        jLabel5.setIcon(new javax.swing.ImageIcon(getClass().getResource("/ventana/fondodef.png"))); // NOI18N
+        getContentPane().add(jLabel5);
+        jLabel5.setBounds(460, 0, 620, 410);
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
@@ -2672,28 +2916,6 @@ public class ventanasMuestra extends javax.swing.JFrame{
         }
     }//GEN-LAST:event_botonActualizarAgregandoHuellaActionPerformed
 
-    private void botonSalirActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonSalirActionPerformed
-        // TODO add your handling code here:
-        conexionConsulta.desconectar();
-        DateTimeFormatter dtf5 = DateTimeFormatter.ofPattern("yyyy/MM/dd");
-        System.out.println("yyyy/MM/dd-> " + dtf5.format(LocalDateTime.now()));
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm:ss");
-        System.out.println("HH:mm:ss-> " + dtf.format(LocalDateTime.now()));
-        Connection c = conexionConsulta.conectar();
-        try (PreparedStatement registroLog = c.prepareStatement("INSERT INTO LOGS(NAME_USUARIO, ACCION, FECHA_ACCION, HORA_ACCION) values(?, ?, ?, ?)", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE)) {
-            registroLog.setString(1, usuario);
-            registroLog.setString(2, "Salio del sistema");
-            registroLog.setString(3, dtf5.format(LocalDateTime.now()));
-            registroLog.setString(4, dtf.format(LocalDateTime.now()));
-            registroLog.execute();
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(null, "Ocurrió un error al INSERTAR EN LOGS" + ex, "Error", JOptionPane.ERROR_MESSAGE);
-        } finally {
-            System.exit(0);
-        }
-        
-    }//GEN-LAST:event_botonSalirActionPerformed
-
     private void botonDevolucionActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonDevolucionActionPerformed
         // TODO add your handling code here:
         try{
@@ -2708,7 +2930,7 @@ public class ventanasMuestra extends javax.swing.JFrame{
     private void botonPrestamo2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonPrestamo2ActionPerformed
         // TODO add your handling code here:
         try{
-            prestamo2();
+            prestamo2("");
             resetHuella();
             Reclutador.clear();
         }catch(Exception ex){
@@ -2728,14 +2950,69 @@ public class ventanasMuestra extends javax.swing.JFrame{
         }//fin try-catch//fin try-catch
     }//GEN-LAST:event_botonDevolucionCtaActionPerformed
 
+    private void formWindowClosing(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosing
+        // TODO add your handling code here:
+    }//GEN-LAST:event_formWindowClosing
+
+    private void formWindowClosed(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_formWindowClosed
+
+    private void botonSalirActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonSalirActionPerformed
+        // TODO add your handling code here:
+        conexionConsulta.desconectar();
+        DateTimeFormatter dtf5 = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+        System.out.println("yyyy/MM/dd-> " + dtf5.format(LocalDateTime.now()));
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm:ss");
+        System.out.println("HH:mm:ss-> " + dtf.format(LocalDateTime.now()));
+        Connection c = conexionConsulta.conectar();
+        try (PreparedStatement registroLog = c.prepareStatement("INSERT INTO LOGS(NAME_USUARIO, ACCION, FECHA_ACCION, HORA_ACCION) values(?, ?, ?, ?)", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE)) {
+            registroLog.setString(1, usuario);
+            registroLog.setString(2, "Salio del sistema");
+            registroLog.setString(3, dtf5.format(LocalDateTime.now()));
+            registroLog.setString(4, dtf.format(LocalDateTime.now()));
+            registroLog.execute();
+            System.exit(0);
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(null, "Ocurrió un error al INSERTAR EN LOGS" + ex, "Error", JOptionPane.ERROR_MESSAGE);
+        }
+
+    }//GEN-LAST:event_botonSalirActionPerformed
+
+    private void administrarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_administrarActionPerformed
+        // TODO add your handling code here:
+        //conexionConsulta.desconectar();
+        conexionConsulta.desconectar();
+        DateTimeFormatter dtf5 = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+        System.out.println("yyyy/MM/dd-> " + dtf5.format(LocalDateTime.now()));
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm:ss");
+        System.out.println("HH:mm:ss-> " + dtf.format(LocalDateTime.now()));
+        Connection c = conexionConsulta.conectar();
+        try (PreparedStatement registroLog = c.prepareStatement("INSERT INTO LOGS(NAME_USUARIO, ACCION, FECHA_ACCION, HORA_ACCION) values(?, ?, ?, ?)", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE)) {
+            registroLog.setString(1, usuario);
+            registroLog.setString(2, "Salio del sistema");
+            registroLog.setString(3, dtf5.format(LocalDateTime.now()));
+            registroLog.setString(4, dtf.format(LocalDateTime.now()));
+            registroLog.execute();
+            //System.exit(0);
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(null, "Ocurrió un error al INSERTAR EN LOGS" + ex, "Error", JOptionPane.ERROR_MESSAGE);
+        }
+        stop();
+        this.setVisible(false);
+        formularioGrupo ch = new formularioGrupo();
+        ch.setVisible(true);
+        this.dispose();
+    }//GEN-LAST:event_administrarActionPerformed
+
     private void botonLimpiarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonLimpiarActionPerformed
         // TODO add your handling code here:
         //lo que ocurre cuando se da clic en el boton de Reset
         try{
             Reclutador.clear();
             labelImagenHuella.setIcon(null); //limpia label de imagen de la huella del formulario
-            textArea.setText(null); 
-            setTemplate(null); 
+            textArea.setText(null);
+            setTemplate(null);
             ////
             featuresverificacion = null;
             Lector.startCapture();
@@ -2748,7 +3025,7 @@ public class ventanasMuestra extends javax.swing.JFrame{
             //Iniciar(); //escuchar si el lector esta conectado o si se captura huella
             start(); //avisa cuando se usa el lector de huella
             EstadoHuellas();
-            
+
             ////
             EnviarTexto("------ Captura de huella digital reiniciada ------");
             //EstadoHuellas();
@@ -2757,10 +3034,6 @@ public class ventanasMuestra extends javax.swing.JFrame{
             java.util.logging.Logger.getLogger(ventanasMuestra.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
     }//GEN-LAST:event_botonLimpiarActionPerformed
-
-    private void formWindowClosing(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosing
-        // TODO add your handling code here:
-    }//GEN-LAST:event_formWindowClosing
 
     private void botonActualizarArregloHuellasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonActualizarArregloHuellasActionPerformed
         // TODO add your handling code here:
@@ -2776,24 +3049,6 @@ public class ventanasMuestra extends javax.swing.JFrame{
             java.util.logging.Logger.getLogger(ventanasMuestra.class.getName()).log(java.util.logging.Level.SEVERE, null, ex );
         }
     }//GEN-LAST:event_botonActualizarArregloHuellasActionPerformed
-
-    private void administrarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_administrarActionPerformed
-        // TODO add your handling code here:
-        stop();
-        this.setVisible(false);
-        formularioGrupo ch = new formularioGrupo();
-        ch.setVisible(true);
-        this.dispose();
-        
-        
-        
-
-    }//GEN-LAST:event_administrarActionPerformed
-
-    private void formWindowClosed(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosed
-        // TODO add your handling code here:
-        cerrar();
-    }//GEN-LAST:event_formWindowClosed
 
     
     /**
@@ -2868,10 +3123,22 @@ public class ventanasMuestra extends javax.swing.JFrame{
     private javax.swing.JButton botonLimpiar;
     public javax.swing.JButton botonPrestamo;
     private javax.swing.JButton botonPrestamo2;
-    public javax.swing.JButton botonSalir;
+    private javax.swing.JButton botonSalir;
     public javax.swing.JButton botonVerificar;
+    private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel jLabel4;
+    private javax.swing.JLabel jLabel5;
+    private javax.swing.JLabel jLabel6;
+    private javax.swing.JLabel jLabel7;
+    private javax.swing.JLabel jLabel8;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
+    private javax.swing.JPanel jPanel3;
+    private javax.swing.JPanel jPanel4;
+    private javax.swing.JPanel jPanel6;
+    private javax.swing.JPanel jPanel7;
+    private javax.swing.JPanel jPanel8;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JLabel labelImagenHuella;
     public javax.swing.JTextArea textArea;

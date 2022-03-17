@@ -35,6 +35,7 @@ public class CatalogoEquipos extends javax.swing.JDialog {
     String nombre = "";
     boolean utilizar = false;
     String usuario = "";
+    boolean obs = false;
     
     public CatalogoEquipos(java.awt.Frame parent, boolean modal, String nombreLab, boolean utiliza, String user) {
         super(parent, modal);
@@ -53,6 +54,25 @@ public class CatalogoEquipos extends javax.swing.JDialog {
         nombre = nombreLab;
         utilizar = utiliza;
         usuario = user;
+    }
+    
+    public CatalogoEquipos(java.awt.Frame parent, boolean modal, String nombreLab, String user, boolean observacion) {
+        super(parent, modal);
+        initComponents();
+        setLocationRelativeTo(null);
+        nombre = nombreLab;        
+        usuario = user;
+        obs = observacion;
+        
+    }
+    
+    public CatalogoEquipos(javax.swing.JDialog parent, boolean modal, String nombreLab, String user, boolean observacion) {
+        super(parent, modal);
+        initComponents();
+        setLocationRelativeTo(null);
+        nombre = nombreLab;        
+        usuario = user;
+        obs = observacion;
     }
     
     public void Obt_EquiposJlist (int utilizable){
@@ -83,58 +103,214 @@ public class CatalogoEquipos extends javax.swing.JDialog {
         }
     }
     
-    public void inutilizarEquipo (int utilizable){
+    public void inutilizarEquipo (int utilizable, String equipo){
         
-        if(listaMultiple.getSelectedValue().equals("")) {
-            JOptionPane.showMessageDialog(null, "¡¡¡Seleccione un EQUIPO!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
-        } else{
-            int elementosActualizadosGrupos = 0;
-            DefaultListModel model = (DefaultListModel) listaMultiple.getModel();
-            List selectedItems = listaMultiple.getSelectedValuesList();
-            for (Object sel : selectedItems ){
-                try{
-                    Connection c = conexionConsulta.conectar();
-                    PreparedStatement actualizarStmt2 = c.prepareStatement("UPDATE EQUIPOS SET UTILIZABLE = ? WHERE NUM_COMP = ? AND ID_LAB = ?");
-                    actualizarStmt2.setInt(1, utilizable);
-                    actualizarStmt2.setString(2, sel.toString());
-                    actualizarStmt2.setString(3, nombre);
-                    elementosActualizadosGrupos = elementosActualizadosGrupos + actualizarStmt2.executeUpdate();
-                    actualizarStmt2.close();
+        if(equipo.equals("")){
+            if(listaMultiple.getSelectedValue().equals("")) {
+                JOptionPane.showMessageDialog(null, "¡¡¡Seleccione un EQUIPO!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
+            } else{
+                int elementosActualizadosGrupos = 0;
+                DefaultListModel model = (DefaultListModel) listaMultiple.getModel();
+                List selectedItems = listaMultiple.getSelectedValuesList();
+                for (Object sel : selectedItems ){
+                    try{
+                        Connection c = conexionConsulta.conectar();
+                        PreparedStatement actualizarStmt2 = c.prepareStatement("UPDATE EQUIPOS SET UTILIZABLE = ? WHERE NUM_COMP = ? AND ID_LAB = ?");
+                        actualizarStmt2.setInt(1, utilizable);
+                        actualizarStmt2.setString(2, sel.toString());
+                        actualizarStmt2.setString(3, nombre);
+                        elementosActualizadosGrupos = elementosActualizadosGrupos + actualizarStmt2.executeUpdate();
+                        actualizarStmt2.close();
 
-                    DateTimeFormatter dtf5 = DateTimeFormatter.ofPattern("yyyy/MM/dd");
-                    System.out.println("yyyy/MM/dd-> " + dtf5.format(LocalDateTime.now()));
-                    DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm:ss");
-                    System.out.println("HH:mm:ss-> " + dtf.format(LocalDateTime.now()));
-                    //Connection c = conexionConsulta.conectar();
-                    try (PreparedStatement registroLog = c.prepareStatement("INSERT INTO LOGS(NAME_USUARIO, ACCION, FECHA_ACCION, HORA_ACCION) values(?, ?, ?, ?)", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE)) {
-                        registroLog.setString(1, usuario);
-                        if(utilizable == 0){
-                            String utilizableString = "INUTILIZABLE";
-                            registroLog.setString(2, "El equipo: "+sel.toString()+"cambio a: "+utilizableString);
-                        } else if(utilizable == 1){
-                            String utilizableString = "UTILIZABLE";
-                            registroLog.setString(2, "El equipo: " + sel.toString() + "cambio a: " + utilizableString);
+                        DateTimeFormatter dtf5 = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+                        System.out.println("yyyy/MM/dd-> " + dtf5.format(LocalDateTime.now()));
+                        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm:ss");
+                        System.out.println("HH:mm:ss-> " + dtf.format(LocalDateTime.now()));
+                        //Connection c = conexionConsulta.conectar();
+                        try (PreparedStatement registroLog = c.prepareStatement("INSERT INTO LOGS(NAME_USUARIO, ACCION, FECHA_ACCION, HORA_ACCION) values(?, ?, ?, ?)", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE)) {
+                            registroLog.setString(1, usuario);
+                            if(utilizable == 0){
+                                String utilizableString = "INUTILIZABLE";
+                                registroLog.setString(2, "El equipo: "+sel.toString()+"cambio a: "+utilizableString);
+                                observacionEquipo(sel.toString());                            
+                            } else if(utilizable == 1){
+                                String utilizableString = "UTILIZABLE";
+                                registroLog.setString(2, "El equipo: " + sel.toString() + "cambio a: " + utilizableString);
+                            }
+                            registroLog.setString(3, dtf5.format(LocalDateTime.now()));
+                            registroLog.setString(4, dtf.format(LocalDateTime.now()));
+                            registroLog.execute();
+                        } catch (SQLException ex) {
+                            JOptionPane.showMessageDialog(null, "Ocurrió un error al INSERTAR EN LOGS" + ex, "Error", JOptionPane.ERROR_MESSAGE);
                         }
-                        registroLog.setString(3, dtf5.format(LocalDateTime.now()));
-                        registroLog.setString(4, dtf.format(LocalDateTime.now()));
-                        registroLog.execute();
-                    } catch (SQLException ex) {
-                        JOptionPane.showMessageDialog(null, "Ocurrió un error al INSERTAR EN LOGS" + ex, "Error", JOptionPane.ERROR_MESSAGE);
+                    }catch (SQLException ex){
+                         JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un ERROR al tratar de ACTUALIZAR LABORATORIOS!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
+                    }finally{
+                        conexionConsulta.desconectar();
                     }
-                }catch (SQLException ex){
-                     JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un ERROR al tratar de ACTUALIZAR LABORATORIOS!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
-                }finally{
-                    conexionConsulta.desconectar();
                 }
-            }
 
-            if(elementosActualizadosGrupos > 0){
-                JOptionPane.showMessageDialog(null, "Se actualizo corectamente el estado UTILIZABLE de "+elementosActualizadosGrupos+" EQUIPOS", "Éxito", JOptionPane.INFORMATION_MESSAGE );
-            }
+                if(elementosActualizadosGrupos > 0){
+                    JOptionPane.showMessageDialog(null, "Se actualizo corectamente el estado UTILIZABLE de "+elementosActualizadosGrupos+" EQUIPOS", "Éxito", JOptionPane.INFORMATION_MESSAGE );
+                }
 
+            }
+        } else {            
+            try {
+                Connection c = conexionConsulta.conectar();
+                PreparedStatement actualizarStmt2 = c.prepareStatement("UPDATE EQUIPOS SET UTILIZABLE = ? WHERE NUM_COMP = ? AND ID_LAB = ?");
+                actualizarStmt2.setInt(1, utilizable);
+                actualizarStmt2.setString(2, equipo);
+                actualizarStmt2.setString(3, nombre);
+                int elementosActualizadosGrupos = actualizarStmt2.executeUpdate();
+                if (elementosActualizadosGrupos > 0) {
+                JOptionPane.showMessageDialog(null, "Se actualizo corectamente el estado UTILIZABLE de " + elementosActualizadosGrupos + " EQUIPOS", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(null, "Ocurrió un error al tratar de Modificar Utilizable en Equipo" + equipo, "Error", JOptionPane.ERROR_MESSAGE);
+                }
+                actualizarStmt2.close();
+
+                DateTimeFormatter dtf5 = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+                System.out.println("yyyy/MM/dd-> " + dtf5.format(LocalDateTime.now()));
+                DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm:ss");
+                System.out.println("HH:mm:ss-> " + dtf.format(LocalDateTime.now()));
+                //Connection c = conexionConsulta.conectar();
+                try (PreparedStatement registroLog = c.prepareStatement("INSERT INTO LOGS(NAME_USUARIO, ACCION, FECHA_ACCION, HORA_ACCION) values(?, ?, ?, ?)", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE)) {
+                    registroLog.setString(1, usuario);
+                    if (utilizable == 0) {
+                        String utilizableString = "INUTILIZABLE";
+                        registroLog.setString(2, "El equipo: " + equipo + "cambio a: " + utilizableString);
+                        //observacionEquipo(equipo);
+                    } /*else if (utilizable == 1) {
+                        String utilizableString = "UTILIZABLE";
+                        registroLog.setString(2, "El equipo: " + sel.toString() + "cambio a: " + utilizableString);
+                    }*/
+                    registroLog.setString(3, dtf5.format(LocalDateTime.now()));
+                    registroLog.setString(4, dtf.format(LocalDateTime.now()));
+                    registroLog.execute();
+                } catch (SQLException ex) {
+                    JOptionPane.showMessageDialog(null, "Ocurrió un error al INSERTAR EN LOGS" + ex, "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un ERROR al tratar de ACTUALIZAR LABORATORIOS!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE);
+            } finally {
+                conexionConsulta.desconectar();
+            }            
         }
         
-        
+    }
+    
+    public void observacionEquipo(String equipo){
+        if(equipo == ""){
+            int countElementos = 0;
+            if(listaMultiple.getSelectedValue().equals("")) {
+                JOptionPane.showMessageDialog(null, "¡¡¡Seleccione un EQUIPO!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
+            } else{
+                DefaultListModel model = (DefaultListModel) listaMultiple.getModel();
+                List selectedItems = listaMultiple.getSelectedValuesList();
+                for (Object sel : selectedItems ){
+                    countElementos ++;
+                }
+                if(countElementos > 1){
+                    JOptionPane.showMessageDialog(null, "¡¡¡Seleccione solo UN EQUIPO!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
+                } else {
+                    Connection c = conexionConsulta.conectar();
+                    try {
+                        PreparedStatement consultaObs = c.prepareStatement("SELECT OBS_EQUIPO FROM EQUIPOS WHERE NUM_COMP = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                        consultaObs.setString(1, listaMultiple.getSelectedValue()); 
+                        ResultSet rs1 = consultaObs.executeQuery();
+                        if(rs1.next()){
+                            String observacionesReg = rs1.getString("OBS_EQUIPO");
+                            String observaciones = JOptionPane.showInputDialog(null, "Indique las observaciones del equipo seleccionado:", "Observaciones", JOptionPane.QUESTION_MESSAGE );                                                        
+                            if (observacionesReg .equals("")) {
+                                 if(observaciones == ""){
+                                 JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un ERROR al tratar de agregar OBSERVACIONES!!! \n Intentelo nuevamente ", "Error", JOptionPane.ERROR_MESSAGE );
+                                 } else { 
+                                     PreparedStatement registroLog = c.prepareStatement("UPDATE EQUIPOS SET OBS_EQUIPO = ? WHERE NUM_COMP = ? AND ID_LAB= ?  ", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                                     registroLog.setString(1, observaciones);
+                                     registroLog.setString(2, listaMultiple.getSelectedValue());
+                                     registroLog.setString(3, nombre);
+                                     int actualizo = registroLog.executeUpdate();
+                                     if (actualizo > 0) {
+                                         JOptionPane.showMessageDialog(null, "Se actualizo las observaciones del equipo" + listaMultiple.getSelectedValue() + ".Elementos modificados: " + actualizo, "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                                         int resp = JOptionPane.showConfirmDialog(null, "¿Desea marcar el equipo como inutilizable?",//<- EL MENSAJE 
+                                                 "Alerta!"/*<- El título de la ventana*/, JOptionPane.YES_NO_OPTION/*Las opciones (si o no)*/, JOptionPane.WARNING_MESSAGE/*El tipo de ventana, en este caso WARNING*/);
+                                         //System.out.println(resp); // SI = 0, NO = 1
+                                         if (resp == 0) { //Si responde si
+                                             inutilizarEquipo(0, listaMultiple.getSelectedValue());
+                                         }
+                                     }
+                                 } 
+                                
+                            } else {
+                                if (observaciones == "") {
+                                    JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un ERROR al tratar de agregar OBSERVACIONES!!! \n Intentelo nuevamente ", "Error", JOptionPane.ERROR_MESSAGE);
+                                } else {
+                                    String obsFinal = "";
+                                    obsFinal = observacionesReg + ", " + observaciones;
+                                    PreparedStatement registroLog = c.prepareStatement("UPDATE EQUIPOS SET OBS_EQUIPO = ? WHERE NUM_COMP = ? AND ID_LAB= ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                                    registroLog.setString(1, obsFinal);
+                                    registroLog.setString(2, listaMultiple.getSelectedValue());
+                                    registroLog.setString(3, nombre);
+                                    int actualizo = registroLog.executeUpdate();
+                                    if (actualizo > 0) {
+                                        JOptionPane.showMessageDialog(null, "Se actualizo las observaciones del equipo" + listaMultiple.getSelectedValue() + ".Elementos modificados: " + actualizo, "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                                        int resp = JOptionPane.showConfirmDialog(null, "¿Desea marcar el equipo como inutilizable?",//<- EL MENSAJE 
+                                                "Alerta!"/*<- El título de la ventana*/, JOptionPane.YES_NO_OPTION/*Las opciones (si o no)*/, JOptionPane.WARNING_MESSAGE/*El tipo de ventana, en este caso WARNING*/);
+                                        //System.out.println(resp); // SI = 0, NO = 1
+                                        if (resp == 0) { //Si responde si
+                                            inutilizarEquipo(0, listaMultiple.getSelectedValue());
+                                        }
+                                    }
+                                }                                
+                            }                            
+                        }
+                    } catch (SQLException ex){
+                         JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un ERROR al tratar de agregar OBSERVACIONES!!! \n Intentelo nuevamente "+ex, "Error", JOptionPane.ERROR_MESSAGE );
+                    }finally{
+                        conexionConsulta.desconectar();
+                    }                                
+                }            
+            }
+        } else {
+            Connection c = conexionConsulta.conectar();
+            try {
+                PreparedStatement consultaObs = c.prepareStatement("SELECT OBS_EQUIPO FROM EQUIPOS WHERE NUM_COMP = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                consultaObs.setString(1, equipo);
+                ResultSet rs1 = consultaObs.executeQuery();
+                if (rs1.next()) {
+                    String observacionesReg = rs1.getString("OBS_EQUIPO");
+                    String observaciones = JOptionPane.showInputDialog(null, "Indique las observaciones del equipo seleccionado:", "Observaciones", JOptionPane.QUESTION_MESSAGE);
+                    if (observacionesReg == "") {
+                        PreparedStatement registroLog = c.prepareStatement("UPDATE EQUIPOS SET OBS_EQUIPO = ? WHERE NUM_COMP = ? AND ID_LAB= ?  ", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                        registroLog.setString(1, observaciones);
+                        registroLog.setString(2, equipo);
+                        registroLog.setString(3, nombre);
+                        int actualizo = registroLog.executeUpdate();
+                        if (actualizo > 0) {
+                            //JOptionPane.showMessageDialog(null, "Se actualizo las observaciones del equipo" + listaMultiple.getSelectedValue() + ".Elementos modificados: " + actualizo, "Éxito", JOptionPane.INFORMATION_MESSAGE);                            
+                            
+                        }
+                    } else {
+                        String obsFinal = "";
+                        obsFinal = observacionesReg + ", " + observaciones;
+                        PreparedStatement registroLog = c.prepareStatement("UPDATE EQUIPOS SET OBS_EQUIPO = ? WHERE NUM_COMP = ? AND ID_LAB= ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                        registroLog.setString(1, obsFinal);
+                        registroLog.setString(2, equipo);
+                        registroLog.setString(3, nombre);
+                        int actualizo = registroLog.executeUpdate();
+                        if (actualizo > 0) {
+                            //JOptionPane.showMessageDialog(null, "Se actualizo las observaciones del equipo" + listaMultiple.getSelectedValue() + ".Elementos modificados: " + actualizo, "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                        }
+                    }
+
+                }
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un ERROR al tratar de agregar OBSERVACIONES!!! \n Intentelo nuevamente " + ex, "Error", JOptionPane.ERROR_MESSAGE);
+            } finally {
+                conexionConsulta.desconectar();
+            }
+        }
     }
     
    
@@ -214,14 +390,19 @@ public class CatalogoEquipos extends javax.swing.JDialog {
 
     private void enviarLaboratoriosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_enviarLaboratoriosActionPerformed
         if(utilizar == true){ //UTILIZA
-            inutilizarEquipo(1);
+            inutilizarEquipo(1, "");
             this.setVisible(false);
             this.dispose();
-        } else { //INUTILIZA
-            inutilizarEquipo(0);
+        } else if (obs == false){ //INUTILIZA
+            inutilizarEquipo(0, "");
             this.setVisible(false);
             this.dispose();
+        } else if(obs == true){
+            observacionEquipo("");
         }
+        
+        this.setVisible(false);
+        this.dispose();
         
                     
     }//GEN-LAST:event_enviarLaboratoriosActionPerformed
