@@ -31,6 +31,7 @@ import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
 import javax.swing.JFrame;
 import javax.swing.JList;
+import javax.swing.UIManager;
 
 /**
  *
@@ -47,8 +48,14 @@ public class adminEquipos extends javax.swing.JFrame {
     
     public adminEquipos() {
         cerrar();
+        try{
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Imposible modificar el tema visual", "LookAndFeel inválido", JOptionPane.ERROR_MESSAGE);
+        }
         initComponents(); 
         setLocationRelativeTo(null); //para colocar el jframe en el centro de la pantalla   
+        this.setExtendedState(6);
     }
     
     public void EnviarTexto(String string){
@@ -167,7 +174,7 @@ public class adminEquipos extends javax.swing.JFrame {
             
             //mostrarStmt.setString(1, nombreCorto);
             ResultSet rs1 = mostrarStmt.executeQuery();
-            EnviarTexto("Estos son los registros en la tabla Carritos");
+            EnviarTexto("Estos son los registros en la tabla LABORATORIOS");
             EnviarTexto("ID_LAB    NOMBRE_LAB           UTILIZABLE");
             
             //rs1.beforeFirst(); 
@@ -197,7 +204,7 @@ public class adminEquipos extends javax.swing.JFrame {
             try{
                 //mostrarStmt.setString(1, nombreCorto);
                 ResultSet rs1 = mostrarStmt.executeQuery();
-                EnviarTexto("Estos son los registros en la tabla Carritos");
+                EnviarTexto("Estos son los registros en la tabla EQUIPOS");
                 EnviarTexto("ID_LAB    NOMBRE_LAB      ID_EQUIPO      NUM_COMP      UTILIZABLE      OBS_EQUIPO");
                 rs1.beforeFirst(); 
                 if(rs1.next()){
@@ -464,6 +471,34 @@ public class adminEquipos extends javax.swing.JFrame {
         }
     }
     
+    public static String[] Obt_RolesDeGrupo(String grupo) {
+
+        int tam = 50;
+        String ListaGrupos[] = new String[tam];
+        int n = 0;
+        //ListaLaboratorio.addElement("Selecciona un laboratorio");
+        Connection c = conexionConsulta.conectar();
+        try {
+            PreparedStatement pstm = c.prepareStatement("SELECT DISTINCT NAME_USUARIO FROM USUARIOS U INNER JOIN GRUPOLABORATORIO G ON U.ID_USUARIO = G.ID_USUARIO AND G.ID_GRUPO = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            pstm.setString(1, grupo);
+            ResultSet res = pstm.executeQuery();
+            while (res.next()) {
+                ListaGrupos[n] = res.getString("NAME_USUARIO");
+                n++;
+            }
+            res.close();
+        } catch (SQLException e) {
+            System.err.println("Error en la consulta:" + e.getMessage());;
+        } finally {
+            conexionConsulta.desconectar();
+        }
+        if (n == 0) {
+            return null;
+        } else {
+            return ListaGrupos;
+        }
+    }
+    
     public String[] Obt_Roles(){
         
         int tam = 50;
@@ -617,7 +652,7 @@ public class adminEquipos extends javax.swing.JFrame {
             PreparedStatement mostrarStmt = c.prepareStatement("SELECT G.ID_GRUPO, G.ID_LAB, G.ID_USUARIO, R.NAME_USUARIO FROM GRUPOLABORATORIO G INNER JOIN USUARIOS R ON G.ID_USUARIO = R.ID_USUARIO ORDER BY G.ID_GRUPO" , ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
             //mostrarStmt.setString(1, nombreCorto);
             ResultSet rs1 = mostrarStmt.executeQuery();
-            EnviarTexto("Estos son los registros en la tabla Carritos");
+            EnviarTexto("Estos son los registros en la tabla GRUPO");
             EnviarTexto("ID_GRUPO                NOM_GRUPO               ID_LAB                    ID_USUARIO                    NAME_USUARIO");
             
             //rs1.beforeFirst(); 
@@ -976,25 +1011,25 @@ public class adminEquipos extends javax.swing.JFrame {
     }
     
     //Este modulo se utilizó para actualizar multiples campos de fecha con valor default "0000-00-00", lo cual causaba un error
-    /*public void modificarFechas(){
+   /* public void modificarFechas(){
         Connection c = conexionConsulta.conectar();
         int count = 0;
         int act = 0;
         try{
-            PreparedStatement mostrarStmt = c.prepareStatement("SELECT ID_EQUIPO, FECHA_REUTILIZA FROM EQUIPOS" , ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            PreparedStatement mostrarStmt = c.prepareStatement("SELECT NUM_CTA, FECHA_ULT_USO FROM ALUMNOS" , ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
             //mostrarStmt.setString(1, "0000-00-00");
             ResultSet rs1 = mostrarStmt.executeQuery();
             EnviarTexto("Estos son los Equipos registrados ");
-            EnviarTexto("ID_EQUIPO       FECHA_REUTILIZA");
+            EnviarTexto("NUM_CTA     FECHA_ULT_USO");
             if(rs1.next()){
                 rs1.beforeFirst(); 
                 while (rs1.next()) {
-                String idUsuario = rs1.getString("ID_EQUIPO");
-                String nomUsuario = rs1.getString("FECHA_REUTILIZA");
+                String idUsuario = rs1.getString("NUM_CTA");
+                String nomUsuario = rs1.getString("FECHA_ULT_USO");
                     if(nomUsuario.equals("0000-00-00")){
                         count ++;
                         EnviarTexto(idUsuario +"                  " +nomUsuario+" / "+count);
-                        PreparedStatement updateStmt = c.prepareStatement("UPDATE EQUIPOS SET FECHA_REUTILIZA = ? WHERE ID_EQUIPO = ?;" , ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                        PreparedStatement updateStmt = c.prepareStatement("UPDATE ALUMNOS SET FECHA_ULT_USO = ? WHERE NUM_CTA = ?;" , ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
                         updateStmt.setString(1, "1111-11-11" );
                         updateStmt.setString(2, idUsuario);
                         act = act + updateStmt.executeUpdate();
@@ -1125,6 +1160,107 @@ public class adminEquipos extends javax.swing.JFrame {
             }
         }
     }
+    
+    public void agregarUsuario(){
+        Connection c = conexionConsulta.conectar();
+        try {
+            String ListaGrupos[] = Obt_Grupos();
+            Object lab = JOptionPane.showInputDialog(null, "Seleccione el GRUPO al que se le AGREGARA EL USUARIO ", "\n AGREGAR USUARIO", JOptionPane.QUESTION_MESSAGE, null, ListaGrupos, "01");
+            String nameGrupo = lab.toString();
+            PreparedStatement verificarStmt = c.prepareStatement("SELECT ID_GRUPO FROM GRUPOS WHERE NOM_GRUPO = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            verificarStmt.setString(1, nameGrupo);
+            ResultSet rs1 = verificarStmt.executeQuery();
+            if (rs1.next()) {
+                String idGrupo = rs1.getString("ID_GRUPO");
+                PreparedStatement verificarStmt1 = c.prepareStatement("SELECT DISTINCT ID_LAB FROM GRUPOLABORATORIO WHERE ID_GRUPO = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                verificarStmt1.setString(1, idGrupo);
+                ResultSet rs = verificarStmt1.executeQuery();
+                List<String> arregloLaboratorios = new ArrayList<String>();                               
+                while (rs.next()) {
+                    arregloLaboratorios.add(rs.getString("ID_LAB"));                    
+                }
+                String ListaUsuarios[] = Obt_RolesSinGrupo();
+                Object user = JOptionPane.showInputDialog(null, "Seleccione el USUARIO que se le AGREGARA AL GRUPO", "\n AGREGAR USUARIO", JOptionPane.QUESTION_MESSAGE, null, ListaUsuarios, "01");
+                String usuario= user.toString();
+                PreparedStatement verificarStmt2 = c.prepareStatement("SELECT ID_USUARIO FROM USUARIOS WHERE NAME_USUARIO = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                verificarStmt2.setString(1, usuario);
+                ResultSet rs2 = verificarStmt2.executeQuery();
+                int grupoCreado = 0;
+                int UsuarioAgregado = 0;
+                if (rs2.next()){
+                    String idUsuario = rs2.getString("ID_USUARIO");
+                    int laboratorios = arregloLaboratorios.size();
+                    while (laboratorios > 0){
+                        PreparedStatement agregarStmt2 = c.prepareStatement("INSERT INTO GRUPOLABORATORIO(ID_GRUPO, ID_LAB, ID_USUARIO ) VALUES (?, ?, ? )", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);                        
+                        agregarStmt2.setString(1, idGrupo);
+                        agregarStmt2.setString(2, arregloLaboratorios.get(laboratorios - 1));
+                        agregarStmt2.setString(3, idUsuario);                        
+                        grupoCreado = agregarStmt2.executeUpdate();
+                        if(grupoCreado < 1){
+                            JOptionPane.showMessageDialog(null, "Ocurrió un error al Registrar al usuario", "Error", JOptionPane.ERROR_MESSAGE);
+                            break;
+                        } else {
+                            UsuarioAgregado++;
+                           laboratorios --; 
+                        }
+                        
+                    }
+                    if(UsuarioAgregado > 0){
+                         JOptionPane.showMessageDialog(null, "El GRUPO se ha ACTUALIZADO con exito\nElementos ACTUALIZADOS en total: "+UsuarioAgregado, "Éxito", JOptionPane.INFORMATION_MESSAGE );
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(null, "Ocurrió un error al Registrar al usuario, NO SE ENCONTRÖ USUARIO", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+                
+            } else {
+                JOptionPane.showMessageDialog(null, "Ocurrió un error al Registrar al usuario, NO SE ENCONTRÖ GRUPO", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch(SQLException e){
+            JOptionPane.showMessageDialog(null, "Ocurrió un error al registrar la penalización\nExcepción es " + e + " y su descripcion:" + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+        
+    }
+    
+    public void eliminarUsuario(){
+        Connection c = conexionConsulta.conectar();
+        try {
+            String ListaGrupos[] = Obt_Grupos();
+            Object lab = JOptionPane.showInputDialog(null, "Seleccione el GRUPO al que se le ELIMINARA EL USUARIO ", "\n AGREGAR USUARIO", JOptionPane.QUESTION_MESSAGE, null, ListaGrupos, "01");
+            String nameGrupo = lab.toString();
+            PreparedStatement verificarStmt = c.prepareStatement("SELECT ID_GRUPO FROM GRUPOS WHERE NOM_GRUPO = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            verificarStmt.setString(1, nameGrupo);
+            ResultSet rs1 = verificarStmt.executeQuery();
+            if (rs1.next()) {
+                String idGrupo = rs1.getString("ID_GRUPO");                
+                String ListaUsuarios[] = Obt_RolesDeGrupo(idGrupo);
+                Object user = JOptionPane.showInputDialog(null, "Seleccione el USUARIO que se ELIMINARA DEL GRUPO", "\n ELIMINAR USUARIO", JOptionPane.QUESTION_MESSAGE, null, ListaUsuarios, "01");
+                String usuario = user.toString();
+                PreparedStatement verificarStmt2 = c.prepareStatement("SELECT ID_USUARIO FROM USUARIOS WHERE NAME_USUARIO = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                verificarStmt2.setString(1, usuario);
+                ResultSet rs2 = verificarStmt2.executeQuery();
+                int grupoCreado = 0;                
+                if (rs2.next()) {
+                    String idUsuario = rs2.getString("ID_USUARIO");                    
+                        PreparedStatement agregarStmt2 = c.prepareStatement("DELETE FROM GRUPOLABORATORIO WHERE ID_USUARIO = ? AND ID_GRUPO = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                        agregarStmt2.setString(2, idGrupo);                        
+                        agregarStmt2.setString(1, idUsuario);
+                        grupoCreado = agregarStmt2.executeUpdate();
+                        if (grupoCreado < 1) {
+                            JOptionPane.showMessageDialog(null, "Ocurrió un error al Registrar al usuario", "Error", JOptionPane.ERROR_MESSAGE);                            
+                        } else {
+                            JOptionPane.showMessageDialog(null, "El GRUPO se ha ACTUALIZADO con exito\nElementos ACTUALIZADOS en total: " + grupoCreado, "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                        }                                       
+                } else {
+                    JOptionPane.showMessageDialog(null, "Ocurrió un error al Registrar al usuario, NO SE ENCONTRÖ USUARIO", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+
+            } else {
+                JOptionPane.showMessageDialog(null, "Ocurrió un error al Registrar al usuario, NO SE ENCONTRÖ GRUPO", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(null, "Ocurrió un error al registrar la penalización\nExcepción es " + e + " y su descripcion:" + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -1134,8 +1270,6 @@ public class adminEquipos extends javax.swing.JFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        jPanel1 = new javax.swing.JPanel();
-        jButton6 = new javax.swing.JButton();
         jScrollPane1 = new javax.swing.JScrollPane();
         textArea = new javax.swing.JTextArea();
         botonLimpiar = new javax.swing.JButton();
@@ -1150,6 +1284,8 @@ public class adminEquipos extends javax.swing.JFrame {
         jButton14 = new javax.swing.JButton();
         jButton17 = new javax.swing.JButton();
         jButton13 = new javax.swing.JButton();
+        jButton19 = new javax.swing.JButton();
+        jButton20 = new javax.swing.JButton();
         jPanel4 = new javax.swing.JPanel();
         jButton5 = new javax.swing.JButton();
         jButton8 = new javax.swing.JButton();
@@ -1163,6 +1299,9 @@ public class adminEquipos extends javax.swing.JFrame {
         jButton18 = new javax.swing.JButton();
         jButton2 = new javax.swing.JButton();
         botonPrestamos = new javax.swing.JButton();
+        jButton6 = new javax.swing.JButton();
+        jLabel2 = new javax.swing.JLabel();
+        jLabel1 = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         addWindowListener(new java.awt.event.WindowAdapter() {
@@ -1176,49 +1315,49 @@ public class adminEquipos extends javax.swing.JFrame {
                 formWindowOpened(evt);
             }
         });
+        getContentPane().setLayout(null);
 
-        jButton6.setText("Penalizar");
-        jButton6.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton6ActionPerformed(evt);
-            }
-        });
-
-        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
-        jPanel1.setLayout(jPanel1Layout);
-        jPanel1Layout.setHorizontalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jButton6, javax.swing.GroupLayout.DEFAULT_SIZE, 147, Short.MAX_VALUE)
-                .addContainerGap())
-        );
-        jPanel1Layout.setVerticalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addComponent(jButton6)
-                .addGap(0, 50, Short.MAX_VALUE))
-        );
-
+        textArea.setBackground(new java.awt.Color(221, 234, 234));
         textArea.setColumns(20);
+        textArea.setFont(new java.awt.Font("Tahoma", 0, 12)); // NOI18N
         textArea.setRows(5);
+        textArea.setCursor(new java.awt.Cursor(java.awt.Cursor.TEXT_CURSOR));
         jScrollPane1.setViewportView(textArea);
 
+        getContentPane().add(jScrollPane1);
+        jScrollPane1.setBounds(469, 210, 870, 386);
+
         botonLimpiar.setText("Limpiar");
+        botonLimpiar.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
         botonLimpiar.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 botonLimpiarActionPerformed(evt);
             }
         });
+        getContentPane().add(botonLimpiar);
+        botonLimpiar.setBounds(930, 620, 118, 30);
 
         jButton1.setText("Salir");
+        jButton1.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
         jButton1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton1ActionPerformed(evt);
             }
         });
+        getContentPane().add(jButton1);
+        jButton1.setBounds(1230, 620, 115, 30);
+
+        jTabbedPane1.setBackground(new java.awt.Color(153, 189, 191));
+        jTabbedPane1.setBorder(javax.swing.BorderFactory.createEtchedBorder());
+        jTabbedPane1.setToolTipText("");
+        jTabbedPane1.setFont(new java.awt.Font("Yu Gothic Medium", 2, 10)); // NOI18N
+        jTabbedPane1.setMinimumSize(new java.awt.Dimension(97, 92));
+        jTabbedPane1.setOpaque(true);
+
+        jPanel2.setBackground(new java.awt.Color(153, 189, 191));
 
         botonCarritoNuevo.setText("Agregar laboratorio nuevo");
+        botonCarritoNuevo.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
         botonCarritoNuevo.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 botonCarritoNuevoActionPerformed(evt);
@@ -1226,6 +1365,7 @@ public class adminEquipos extends javax.swing.JFrame {
         });
 
         jButton7.setText("Inutilizar laboratorio");
+        jButton7.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
         jButton7.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton7ActionPerformed(evt);
@@ -1233,6 +1373,7 @@ public class adminEquipos extends javax.swing.JFrame {
         });
 
         jButton9.setText("Mostar laboratorio");
+        jButton9.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
         jButton9.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton9ActionPerformed(evt);
@@ -1249,23 +1390,26 @@ public class adminEquipos extends javax.swing.JFrame {
                     .addComponent(jButton9, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jButton7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(botonCarritoNuevo, javax.swing.GroupLayout.DEFAULT_SIZE, 189, Short.MAX_VALUE))
-                .addContainerGap(204, Short.MAX_VALUE))
+                .addContainerGap(200, Short.MAX_VALUE))
         );
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addGap(64, 64, 64)
-                .addComponent(botonCarritoNuevo)
+                .addComponent(botonCarritoNuevo, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
-                .addComponent(jButton9)
+                .addComponent(jButton9, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
-                .addComponent(jButton7)
-                .addContainerGap(235, Short.MAX_VALUE))
+                .addComponent(jButton7, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(266, Short.MAX_VALUE))
         );
 
-        jTabbedPane1.addTab("LABORATORIOS", jPanel2);
+        jTabbedPane1.addTab("         LABORATORIOS", jPanel2);
+
+        jPanel3.setBackground(new java.awt.Color(153, 189, 191));
 
         jButton12.setText("Mostrar grupos");
+        jButton12.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
         jButton12.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton12ActionPerformed(evt);
@@ -1273,6 +1417,7 @@ public class adminEquipos extends javax.swing.JFrame {
         });
 
         jButton14.setText("Eliminar grupo");
+        jButton14.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
         jButton14.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton14ActionPerformed(evt);
@@ -1280,6 +1425,7 @@ public class adminEquipos extends javax.swing.JFrame {
         });
 
         jButton17.setText("Crear Grupo");
+        jButton17.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
         jButton17.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton17ActionPerformed(evt);
@@ -1287,9 +1433,27 @@ public class adminEquipos extends javax.swing.JFrame {
         });
 
         jButton13.setText("Actualizar grupo");
+        jButton13.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
         jButton13.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton13ActionPerformed(evt);
+            }
+        });
+
+        jButton19.setText("Agregar Usuario");
+        jButton19.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        jButton19.setPreferredSize(new java.awt.Dimension(83, 19));
+        jButton19.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton19ActionPerformed(evt);
+            }
+        });
+
+        jButton20.setText("Eliminar Usuario");
+        jButton20.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        jButton20.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton20ActionPerformed(evt);
             }
         });
 
@@ -1303,26 +1467,36 @@ public class adminEquipos extends javax.swing.JFrame {
                     .addComponent(jButton17, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jButton12, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jButton13, javax.swing.GroupLayout.DEFAULT_SIZE, 189, Short.MAX_VALUE)
-                    .addComponent(jButton14, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addContainerGap(204, Short.MAX_VALUE))
+                    .addComponent(jButton14, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jButton19, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jButton20, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(200, Short.MAX_VALUE))
         );
         jPanel3Layout.setVerticalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel3Layout.createSequentialGroup()
                 .addGap(64, 64, 64)
-                .addComponent(jButton17)
+                .addComponent(jButton17, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
-                .addComponent(jButton12)
+                .addComponent(jButton12, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(17, 17, 17)
-                .addComponent(jButton13)
+                .addComponent(jButton13, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
-                .addComponent(jButton14)
-                .addGap(0, 195, Short.MAX_VALUE))
+                .addComponent(jButton14, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(18, 18, 18)
+                .addComponent(jButton19, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(18, 18, 18)
+                .addComponent(jButton20, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(0, 144, Short.MAX_VALUE))
         );
 
-        jTabbedPane1.addTab("GRUPOS", jPanel3);
+        jTabbedPane1.addTab("             GRUPOS", jPanel3);
+
+        jPanel4.setBackground(new java.awt.Color(153, 189, 191));
 
         jButton5.setText("Utilizar equipo");
+        jButton5.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        jButton5.setPreferredSize(null);
         jButton5.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton5ActionPerformed(evt);
@@ -1330,6 +1504,8 @@ public class adminEquipos extends javax.swing.JFrame {
         });
 
         jButton8.setText("Inutilizar equipo");
+        jButton8.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        jButton8.setPreferredSize(null);
         jButton8.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton8ActionPerformed(evt);
@@ -1337,6 +1513,8 @@ public class adminEquipos extends javax.swing.JFrame {
         });
 
         jButton10.setText("Mostrar equipos");
+        jButton10.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        jButton10.setPreferredSize(null);
         jButton10.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton10ActionPerformed(evt);
@@ -1344,6 +1522,8 @@ public class adminEquipos extends javax.swing.JFrame {
         });
 
         jButton4.setText("Agregar equipos a laboratorio");
+        jButton4.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        jButton4.setPreferredSize(null);
         jButton4.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton4ActionPerformed(evt);
@@ -1351,6 +1531,8 @@ public class adminEquipos extends javax.swing.JFrame {
         });
 
         jButton3.setText("Agregar Observaciones");
+        jButton3.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        jButton3.setPreferredSize(null);
         jButton3.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton3ActionPerformed(evt);
@@ -1369,27 +1551,30 @@ public class adminEquipos extends javax.swing.JFrame {
                     .addComponent(jButton5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jButton4, javax.swing.GroupLayout.DEFAULT_SIZE, 189, Short.MAX_VALUE)
                     .addComponent(jButton3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addContainerGap(211, Short.MAX_VALUE))
+                .addContainerGap(200, Short.MAX_VALUE))
         );
         jPanel4Layout.setVerticalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel4Layout.createSequentialGroup()
                 .addGap(64, 64, 64)
-                .addComponent(jButton4)
+                .addComponent(jButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
-                .addComponent(jButton10)
+                .addComponent(jButton10, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
-                .addComponent(jButton8)
+                .addComponent(jButton8, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
-                .addComponent(jButton5)
+                .addComponent(jButton5, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
-                .addComponent(jButton3)
-                .addContainerGap(150, Short.MAX_VALUE))
+                .addComponent(jButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(184, Short.MAX_VALUE))
         );
 
-        jTabbedPane1.addTab("EQUIPOS", jPanel4);
+        jTabbedPane1.addTab("             EQUIPOS", jPanel4);
+
+        jPanel5.setBackground(new java.awt.Color(153, 189, 191));
 
         jButton11.setText("Crear Usuario");
+        jButton11.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
         jButton11.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton11ActionPerformed(evt);
@@ -1397,6 +1582,7 @@ public class adminEquipos extends javax.swing.JFrame {
         });
 
         jButton15.setText("Borrar Usuario");
+        jButton15.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
         jButton15.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton15ActionPerformed(evt);
@@ -1404,6 +1590,7 @@ public class adminEquipos extends javax.swing.JFrame {
         });
 
         jButton16.setText("Modificar Contraseña");
+        jButton16.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
         jButton16.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton16ActionPerformed(evt);
@@ -1411,6 +1598,7 @@ public class adminEquipos extends javax.swing.JFrame {
         });
 
         jButton18.setText("Mostrar Usuarios");
+        jButton18.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
         jButton18.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton18ActionPerformed(evt);
@@ -1424,36 +1612,43 @@ public class adminEquipos extends javax.swing.JFrame {
             .addGroup(jPanel5Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jButton11, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jButton18, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jButton15, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jButton16, javax.swing.GroupLayout.DEFAULT_SIZE, 189, Short.MAX_VALUE))
-                .addContainerGap(204, Short.MAX_VALUE))
+                    .addComponent(jButton16, javax.swing.GroupLayout.DEFAULT_SIZE, 189, Short.MAX_VALUE)
+                    .addComponent(jButton11, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(200, Short.MAX_VALUE))
         );
         jPanel5Layout.setVerticalGroup(
             jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel5Layout.createSequentialGroup()
                 .addGap(64, 64, 64)
-                .addComponent(jButton11)
+                .addComponent(jButton11, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
-                .addComponent(jButton18)
+                .addComponent(jButton18, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
-                .addComponent(jButton15)
+                .addComponent(jButton15, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
-                .addComponent(jButton16)
-                .addContainerGap(194, Short.MAX_VALUE))
+                .addComponent(jButton16, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(225, Short.MAX_VALUE))
         );
 
-        jTabbedPane1.addTab("USUARIOS", jPanel5);
+        jTabbedPane1.addTab("             USUARIOS", jPanel5);
+
+        getContentPane().add(jTabbedPane1);
+        jTabbedPane1.setBounds(30, 170, 408, 470);
 
         jButton2.setText("Historial Logs");
+        jButton2.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
         jButton2.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton2ActionPerformed(evt);
             }
         });
+        getContentPane().add(jButton2);
+        jButton2.setBounds(480, 620, 142, 30);
 
         botonPrestamos.setText("Volver a Prestamos");
+        botonPrestamos.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
         botonPrestamos.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 botonPrestamosMouseClicked(evt);
@@ -1464,55 +1659,26 @@ public class adminEquipos extends javax.swing.JFrame {
                 botonPrestamosActionPerformed(evt);
             }
         });
+        getContentPane().add(botonPrestamos);
+        botonPrestamos.setBounds(1060, 620, 147, 30);
 
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
-        getContentPane().setLayout(layout);
-        layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addContainerGap()
-                        .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 142, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(jTabbedPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 408, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, Short.MAX_VALUE)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                        .addComponent(botonPrestamos, javax.swing.GroupLayout.PREFERRED_SIZE, 147, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 74, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addContainerGap())
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 583, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(30, 30, 30))
-                    .addGroup(layout.createSequentialGroup()
-                        .addGap(6, 6, 6)
-                        .addComponent(botonLimpiar, javax.swing.GroupLayout.PREFERRED_SIZE, 118, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addContainerGap())))
-        );
-        layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addComponent(jTabbedPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 432, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addGroup(layout.createSequentialGroup()
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                .addComponent(jButton1)
-                                .addComponent(botonPrestamos))
-                            .addComponent(jButton2))
-                        .addGap(0, 0, Short.MAX_VALUE))))
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 386, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(botonLimpiar)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-        );
+        jButton6.setText("Penalizar");
+        jButton6.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        jButton6.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton6ActionPerformed(evt);
+            }
+        });
+        getContentPane().add(jButton6);
+        jButton6.setBounds(660, 620, 147, 30);
+
+        jLabel2.setIcon(new javax.swing.ImageIcon(getClass().getResource("/ventana/extrafondo.jpg"))); // NOI18N
+        getContentPane().add(jLabel2);
+        jLabel2.setBounds(0, 150, 1360, 600);
+
+        jLabel1.setIcon(new javax.swing.ImageIcon(getClass().getResource("/ventana/titulo ajustado.jpeg"))); // NOI18N
+        getContentPane().add(jLabel1);
+        jLabel1.setBounds(0, 0, 1360, 150);
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
@@ -1764,6 +1930,16 @@ public class adminEquipos extends javax.swing.JFrame {
         penalizarAlumno();        
     }//GEN-LAST:event_jButton6ActionPerformed
 
+    private void jButton19ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton19ActionPerformed
+        // TODO add your handling code here:
+        agregarUsuario();
+    }//GEN-LAST:event_jButton19ActionPerformed
+
+    private void jButton20ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton20ActionPerformed
+        // TODO add your handling code here:
+        eliminarUsuario();
+    }//GEN-LAST:event_jButton20ActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -1809,7 +1985,9 @@ public class adminEquipos extends javax.swing.JFrame {
     private javax.swing.JButton jButton16;
     private javax.swing.JButton jButton17;
     private javax.swing.JButton jButton18;
+    private javax.swing.JButton jButton19;
     private javax.swing.JButton jButton2;
+    private javax.swing.JButton jButton20;
     private javax.swing.JButton jButton3;
     private javax.swing.JButton jButton4;
     private javax.swing.JButton jButton5;
@@ -1817,7 +1995,8 @@ public class adminEquipos extends javax.swing.JFrame {
     private javax.swing.JButton jButton7;
     private javax.swing.JButton jButton8;
     private javax.swing.JButton jButton9;
-    private javax.swing.JPanel jPanel1;
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel2;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
     private javax.swing.JPanel jPanel4;

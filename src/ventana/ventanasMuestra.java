@@ -92,7 +92,7 @@ public class ventanasMuestra extends javax.swing.JFrame{
             JOptionPane.showMessageDialog(null, "Imposible modificar el tema visual", "LookAndFeel inválido", JOptionPane.ERROR_MESSAGE);
         }
         initComponents();
-        System.err.println("ESTE ES EL GRUPO"+grupo);
+        //System.err.println("ESTE ES EL GRUPO"+grupo);
         setLocationRelativeTo(null); //para colocar el jframe en el centro de la pantalla  
         this.setExtendedState(6);
         dispose();
@@ -780,10 +780,29 @@ public class ventanasMuestra extends javax.swing.JFrame{
                                 PreparedStatement cambiarPenalizaciones = c.prepareStatement("UPDATE PENALIZACIONES SET EDO_PENALIZA = ? WHERE ID_PENALIZACION = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
                                 cambiarPenalizaciones.setString(1, "0");
                                 cambiarPenalizaciones.setString(2, idPena);
-                                int cambioPenaliza = cambiarPenalizaciones.executeUpdate(); 
+                                int cambioPenaliza = cambiarPenalizaciones.executeUpdate();                                                                 
+                                PreparedStatement consultaAmoestacion = c.prepareStatement("SELECT AMONESTACIONES FROM ALUMNOS WHERE NUM_CTA = ? ", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                                consultaAmoestacion.setString(1, cuenta);
+                                ResultSet cars = consultaAmoestacion.executeQuery();
+                                if (cars.next()) {
+                                    int numAmonestaciones = cars.getInt("AMONESTACIONES");
+                                    if (numAmonestaciones == 3) {
+                                        PreparedStatement amonestacionAumenta = c.prepareStatement("UPDATE ALUMNOS SET AMONESTACIONES = ? WHERE NUM_CTA = ?");
+                                        amonestacionAumenta.setString(1, "0");
+                                        amonestacionAumenta.setString(2, cuenta);
+                                        int amon = amonestacionAumenta.executeUpdate();
+                                        if (amon > 0) {
+                                            EnviarTexto("Se acabo la penalización por AMONSTACIONES al alumno con numero de cuenta " + cuenta);
+                                            prestamo();
+                                            break;
+                                        }
+                                    }
+                                }
                                 if (cambioPenaliza > 0){
                                     //JOptionPane.showMessageDialog(null, "Se actualizo el estado de penalización", "Éxito", JOptionPane.INFORMATION_MESSAGE );
+                                    EnviarTexto("Se acabo la penalización por AMONSTACIONES al alumno con numero de cuenta " + cuenta);
                                     prestamo();
+                                    break;
                                 }
                             } else {
                                 JOptionPane.showConfirmDialog(null, "No puede realizarse préstamo en PC Puma al usuario\n"+nombre+"\nNúmero de Cuenta/RFC: "+cuenta+"\nRazón: "+razonPena+"\nDesde el día "+fechaIniPena+"\nHasta el "+fechaFinPena, "Usuario Penalizado", JOptionPane.PLAIN_MESSAGE, JOptionPane.ERROR_MESSAGE );                                                            
@@ -882,10 +901,10 @@ public class ventanasMuestra extends javax.swing.JFrame{
                                                         ResultSet re = ObsEquipo.executeQuery();
                                                         if(re.next()){
                                                             String obsEquipo = re.getString("OBS_EQUIPO");
-                                                            if(obsEquipo == ""){
-                                                                System.out.println("Equipo sin observaciones");
-                                                            } else {
+                                                            if(obsEquipo != ""){
                                                                 JOptionPane.showMessageDialog(null, "Este EQUIPO Presenta estas observaciones: \n"+obsEquipo, "Aviso", JOptionPane.INFORMATION_MESSAGE );                                                        
+                                                            } else {                                                                
+                                                                System.out.println("Equipo sin observaciones");
                                                             }
                                                             
                                                         }
@@ -1045,14 +1064,36 @@ public class ventanasMuestra extends javax.swing.JFrame{
                             System.err.println(fechaFinPena);
                             Date date2 = sdformat.parse(fechaHoy);
                             //confirmaNumero = 0; //para que considere al usuario como encontrado y confirmado 
-                            if (date2.after(date1)) {
+                            if (date2.after(date1)) { // Revisando si la penalización ya terminó
                                 PreparedStatement cambiarPenalizaciones = c.prepareStatement("UPDATE PENALIZACIONES SET EDO_PENALIZA = ? WHERE ID_PENALIZACION = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
                                 cambiarPenalizaciones.setString(1, "0");
                                 cambiarPenalizaciones.setString(2, idPena);
                                 int cambioPenaliza = cambiarPenalizaciones.executeUpdate();
+                                
+                                PreparedStatement consultaAmoestacion = c.prepareStatement("SELECT AMONESTACIONES FROM ALUMNOS WHERE NUM_CTA = ? ", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                                consultaAmoestacion.setString(1, cuenta);
+                                ResultSet cars = consultaAmoestacion.executeQuery();
+                                if(cars.next()){
+                                    int numAmonestaciones = cars.getInt("AMONESTACIONES");                                                                        
+                                    if (numAmonestaciones == 3) {
+                                        PreparedStatement amonestacionAumenta = c.prepareStatement("UPDATE ALUMNOS SET AMONESTACIONES = ? WHERE NUM_CTA = ?");
+                                        amonestacionAumenta.setString(1, "0");
+                                        amonestacionAumenta.setString(2, cuenta);
+                                        int amon = amonestacionAumenta.executeUpdate();
+                                        if(amon > 0){
+                                            EnviarTexto("Se acabo la penalización por AMONSTACIONES al alumno con numero de cuenta " + cuenta);
+                                            prestamo2(cuenta);
+                                        } 
+                                    }
+                                }
                                 if (cambioPenaliza > 0) {
                                     //JOptionPane.showMessageDialog(null, "Se actualizo el estado de penalización", "Éxito", JOptionPane.INFORMATION_MESSAGE );
+                                    EnviarTexto("Se acabo la penalización para el alumno con numero de cuenta, ACTUALIZADO " + cuenta);
                                     prestamo2(cuenta);
+                                } else {
+                                    JOptionPane.showConfirmDialog(null, "No puede realizarse préstamo en PC Puma al usuario\n" + nombre + "\nNúmero de Cuenta/RFC: " + cuenta + "\nRazón: NO SE PUDO DESPENALIZAR, Esta penalizado:\nDesde el " + fechaIniPena + "\nHasta el " + fechaFinPena, "Usuario Penalizado", JOptionPane.PLAIN_MESSAGE, JOptionPane.ERROR_MESSAGE);
+                                    conexionConsulta.desconectar();
+                                    EnviarTexto("Proceso de Préstamo inviable por penalizacion a usuario con cuenta " + cuenta);
                                 }
                             } else {
                                 JOptionPane.showConfirmDialog(null, "No puede realizarse préstamo en PC Puma al usuario\n" + nombre + "\nNúmero de Cuenta/RFC: " + cuenta + "\nRazón: " + razonPena + "\nDesde el " + fechaIniPena + "\nHasta el " + fechaFinPena, "Usuario Penalizado", JOptionPane.PLAIN_MESSAGE, JOptionPane.ERROR_MESSAGE);
@@ -2187,6 +2228,7 @@ public class ventanasMuestra extends javax.swing.JFrame{
     
     public void aumentoAmonestacion(String observaciones, String cuenta, String idLab){
         Connection c = conexionConsulta.conectar();
+        //String razonAmonesta = observaciones;
         try{
             PreparedStatement consultaAmoestacion = c.prepareStatement("SELECT AMONESTACIONES, RAZON_AMONESTA FROM ALUMNOS WHERE NUM_CTA = ? ", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
             consultaAmoestacion.setString(1, cuenta);
@@ -2194,7 +2236,7 @@ public class ventanasMuestra extends javax.swing.JFrame{
             if (rs.next()){
                 int numAmonestaciones = rs.getInt("AMONESTACIONES");
                 numAmonestaciones = numAmonestaciones + 1; 
-                String razonAmonesta = rs.getString("RAZON_AMONESTA");
+                String razonAmonestaReg = rs.getString("RAZON_AMONESTA");
                 if(numAmonestaciones == 3){ //Tiene tres amonestaciones
                     PreparedStatement pstm = c.prepareStatement("SELECT FECHA_FIN_PENALIZA, ID_PENALIZACION, RAZON_PENALIZA FROM PENALIZACIONES WHERE FK_NUM_CTA = ? AND EDO_PENALIZA = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
                     pstm.setString(1, cuenta);
@@ -2206,7 +2248,7 @@ public class ventanasMuestra extends javax.swing.JFrame{
                         String mensaje = res.getString("RAZON_PENALIZA");
                         mensaje.concat(",acumuló 3 obseraciones acumuladas");
                         JDateChooser jd = new JDateChooser();
-                        String message ="Selecciona fecha:\nLa fecha de penalizacion registrada es:" +fechaFin+"\n RAZON DE AMONESTACION: "+razonAmonesta;
+                        String message ="Selecciona fecha:\nLa fecha de penalizacion registrada es:" +fechaFin+"\n RAZON DE AMONESTACION: "+razonAmonestaReg.concat(","+ observaciones);
                         Object[] params = {message,jd};
                         String fPenalizacion = JOptionPane.showInputDialog(null,params,"Fecha Penalización",JOptionPane.OK_CANCEL_OPTION);
                         String datePenalizacion="";
@@ -2230,6 +2272,17 @@ public class ventanasMuestra extends javax.swing.JFrame{
                             penalizaUser.execute();
                             penalizaUser.close();
                             JOptionPane.showMessageDialog(null, "Se ha ACTUALIZADO la penalizacion", "Éxito", JOptionPane.INFORMATION_MESSAGE );
+                            razonAmonestaReg = razonAmonestaReg + "," + observaciones;
+                            PreparedStatement amonestacionAumenta = c.prepareStatement("UPDATE ALUMNOS SET AMONESTACIONES = ?, RAZON_AMONESTA = ? WHERE NUM_CTA = ?");
+                            amonestacionAumenta.setString(1, "3");
+                            amonestacionAumenta.setString(2, razonAmonestaReg);
+                            amonestacionAumenta.setString(3, cuenta);
+                            int amon = amonestacionAumenta.executeUpdate();
+                            if (amon > 0) {
+                                JOptionPane.showMessageDialog(null, "Se registro exitosamente la amonestación", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                            } else {
+                                JOptionPane.showMessageDialog(null, "Ocurrió un error al registrar la amonestación", "Error", JOptionPane.ERROR_MESSAGE);
+                            }
                         }catch(SQLException e){
                             JOptionPane.showMessageDialog(null, "Ocurrió un error al ACTUALIZAR la penalización\nExcepción es "+e+" y su descripcion:"+e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE );
                              labelImagenHuella.setIcon(null);
@@ -2237,7 +2290,7 @@ public class ventanasMuestra extends javax.swing.JFrame{
                         
                     } else { //Si no viene penalizado
                         JDateChooser jd = new JDateChooser();
-                        String message ="Selecciona fecha";
+                        String message ="El alumno acumuló 3 AMONESTACIONES, por favor,\nSelecciona fecha:";
                         Object[] params = {message,jd};
                         String fPenalizacion = JOptionPane.showInputDialog(null,params,"Fecha Penalización",JOptionPane.OK_CANCEL_OPTION);
                         String datePenalizacion="";
@@ -2259,7 +2312,7 @@ public class ventanasMuestra extends javax.swing.JFrame{
                             penalizaUser.setString(2, datePenalizacion);
                             penalizaUser.setString(3, hourNow);
                             penalizaUser.setString(4, idLab);
-                            penalizaUser.setString(5, "El alumno acumuló 3 obseraciones acumuladas");
+                            penalizaUser.setString(5, "El alumno acumuló 3 obseraciones de equipo");
                             penalizaUser.setString(6, "2");
                             penalizaUser.setString(7, "0.0");
                             penalizaUser.setString(8, cuenta);
@@ -2269,25 +2322,44 @@ public class ventanasMuestra extends javax.swing.JFrame{
                             System.out.println(penalizaUser);
                             penalizaUser.execute();
                             penalizaUser.close();
+                            razonAmonestaReg = razonAmonestaReg+ ","+observaciones;
+                            PreparedStatement amonestacionAumenta = c.prepareStatement("UPDATE ALUMNOS SET AMONESTACIONES = ?, RAZON_AMONESTA = ? WHERE NUM_CTA = ?");
+                            amonestacionAumenta.setString(1, "3");
+                            amonestacionAumenta.setString(2, razonAmonestaReg);
+                            amonestacionAumenta.setString(3, cuenta);
+                            int amon = amonestacionAumenta.executeUpdate();
+                            if (amon > 0) {
+                                JOptionPane.showMessageDialog(null, "Se registro exitosamente la amonestación", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                            } else {
+                                JOptionPane.showMessageDialog(null, "Ocurrió un error al registrar la amonestación", "Error", JOptionPane.ERROR_MESSAGE);
+                            }
+
+                            amonestacionAumenta.close();
                             JOptionPane.showMessageDialog(null, "Se ha registrado la penalizacion", "Éxito", JOptionPane.INFORMATION_MESSAGE );
                         }catch(SQLException e){
                             JOptionPane.showMessageDialog(null, "Ocurrió un error al registrar la penalización\nExcepción es "+e+" y su descripcion:"+e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE );
                              labelImagenHuella.setIcon(null);
                         }
                     }
-                } else if(numAmonestaciones > 3){
+                } else if(numAmonestaciones < 3){
                     String amonestaciones = Integer.toString(numAmonestaciones);
-                    if(razonAmonesta.equals("")){
-                        razonAmonesta.concat(observaciones);
-                    } else {
-                        razonAmonesta.concat(","+observaciones);
+                    if(razonAmonestaReg == null){
+                        razonAmonestaReg = observaciones;
+                    } else if(razonAmonestaReg != null) {
+                        razonAmonestaReg = razonAmonestaReg+ ","+observaciones;
                     }
                     
                     PreparedStatement amonestacionAumenta = c.prepareStatement("UPDATE ALUMNOS SET AMONESTACIONES = ?, RAZON_AMONESTA = ? WHERE NUM_CTA = ?");
                     amonestacionAumenta.setString(1, amonestaciones);
-                    amonestacionAumenta.setString(2, razonAmonesta);
+                    amonestacionAumenta.setString(2, razonAmonestaReg);
                     amonestacionAumenta.setString(3, cuenta);
-                    amonestacionAumenta.execute();
+                    int amon = amonestacionAumenta.executeUpdate();
+                    if(amon > 0){
+                        JOptionPane.showMessageDialog(null, "Se registro exitosamente la amonestación", "Éxito", JOptionPane.INFORMATION_MESSAGE );
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Ocurrió un error al registrar la amonestación", "Error", JOptionPane.ERROR_MESSAGE );
+                    }
+                       
                     amonestacionAumenta.close();
                     
                 }
@@ -2374,11 +2446,12 @@ public class ventanasMuestra extends javax.swing.JFrame{
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
+        jLabel1 = new javax.swing.JLabel();
         jScrollPane2 = new javax.swing.JScrollPane();
         textArea = new javax.swing.JTextArea();
         jPanel1 = new javax.swing.JPanel();
         labelImagenHuella = new javax.swing.JLabel();
-        jPanel2 = new javax.swing.JPanel();
+        jLabel9 = new javax.swing.JLabel();
         jPanel3 = new javax.swing.JPanel();
         botonIdentificar = new javax.swing.JButton();
         botonVerificar = new javax.swing.JButton();
@@ -2387,20 +2460,20 @@ public class ventanasMuestra extends javax.swing.JFrame{
         botonAlta = new javax.swing.JButton();
         botonActualizarAgregandoHuella = new javax.swing.JButton();
         jLabel4 = new javax.swing.JLabel();
-        jPanel6 = new javax.swing.JPanel();
-        botonDevolucion = new javax.swing.JButton();
-        botonDevolucionCta = new javax.swing.JButton();
-        jLabel8 = new javax.swing.JLabel();
+        jPanel7 = new javax.swing.JPanel();
+        botonPrestamo2 = new javax.swing.JButton();
+        botonPrestamo = new javax.swing.JButton();
+        jLabel7 = new javax.swing.JLabel();
         jPanel8 = new javax.swing.JPanel();
         botonActualizarArregloHuellas = new javax.swing.JButton();
         botonLimpiar = new javax.swing.JButton();
         administrar = new javax.swing.JButton();
         botonSalir = new javax.swing.JButton();
-        jPanel7 = new javax.swing.JPanel();
-        botonPrestamo2 = new javax.swing.JButton();
-        botonPrestamo = new javax.swing.JButton();
-        jLabel7 = new javax.swing.JLabel();
-        jLabel6 = new javax.swing.JLabel();
+        jButton1 = new javax.swing.JButton();
+        jPanel6 = new javax.swing.JPanel();
+        botonDevolucion = new javax.swing.JButton();
+        botonDevolucionCta = new javax.swing.JButton();
+        jLabel8 = new javax.swing.JLabel();
         jLabel3 = new javax.swing.JLabel();
         jLabel5 = new javax.swing.JLabel();
 
@@ -2420,6 +2493,10 @@ public class ventanasMuestra extends javax.swing.JFrame{
         });
         getContentPane().setLayout(null);
 
+        jLabel1.setIcon(new javax.swing.ImageIcon(getClass().getResource("/ventana/titulo ajustado.jpeg"))); // NOI18N
+        getContentPane().add(jLabel1);
+        jLabel1.setBounds(0, 0, 1360, 150);
+
         textArea.setBackground(new java.awt.Color(221, 234, 234));
         textArea.setColumns(20);
         textArea.setRows(5);
@@ -2427,7 +2504,7 @@ public class ventanasMuestra extends javax.swing.JFrame{
         jScrollPane2.setViewportView(textArea);
 
         getContentPane().add(jScrollPane2);
-        jScrollPane2.setBounds(490, 170, 850, 320);
+        jScrollPane2.setBounds(480, 160, 850, 320);
 
         jPanel1.setBackground(new java.awt.Color(153, 189, 191));
         jPanel1.setForeground(java.awt.SystemColor.activeCaptionBorder);
@@ -2436,28 +2513,32 @@ public class ventanasMuestra extends javax.swing.JFrame{
         labelImagenHuella.setForeground(java.awt.SystemColor.activeCaption);
         labelImagenHuella.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
 
+        jLabel9.setText("Huella Digital");
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(21, 21, 21)
+                .addContainerGap()
                 .addComponent(labelImagenHuella, javax.swing.GroupLayout.DEFAULT_SIZE, 399, Short.MAX_VALUE)
-                .addContainerGap())
+                .addGap(21, 21, 21))
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addGap(172, 172, 172)
+                .addComponent(jLabel9)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(labelImagenHuella, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                .addComponent(jLabel9)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(labelImagenHuella, javax.swing.GroupLayout.DEFAULT_SIZE, 289, Short.MAX_VALUE)
                 .addContainerGap())
         );
 
         getContentPane().add(jPanel1);
-        jPanel1.setBounds(30, 170, 430, 310);
-
-        jPanel2.setBackground(new java.awt.Color(212, 224, 222));
-        jPanel2.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        jPanel1.setBounds(30, 160, 430, 320);
 
         jPanel3.setBackground(java.awt.SystemColor.controlHighlight);
         jPanel3.setBorder(javax.swing.BorderFactory.createEtchedBorder());
@@ -2506,6 +2587,9 @@ public class ventanasMuestra extends javax.swing.JFrame{
                 .addContainerGap())
         );
 
+        getContentPane().add(jPanel3);
+        jPanel3.setBounds(30, 510, 280, 103);
+
         jPanel4.setBackground(java.awt.SystemColor.controlHighlight);
         jPanel4.setBorder(javax.swing.BorderFactory.createEtchedBorder());
 
@@ -2546,59 +2630,65 @@ public class ventanasMuestra extends javax.swing.JFrame{
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
                 .addComponent(jLabel4)
-                .addGap(18, 18, 18)
-                .addComponent(botonAlta, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(botonAlta, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(botonActualizarAgregandoHuella, javax.swing.GroupLayout.PREFERRED_SIZE, 24, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
 
-        jPanel6.setBackground(java.awt.SystemColor.controlHighlight);
-        jPanel6.setBorder(javax.swing.BorderFactory.createEtchedBorder());
+        getContentPane().add(jPanel4);
+        jPanel4.setBounds(380, 510, 280, 103);
 
-        botonDevolucion.setText("Devolucion");
-        botonDevolucion.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
-        botonDevolucion.addActionListener(new java.awt.event.ActionListener() {
+        jPanel7.setBackground(java.awt.SystemColor.controlHighlight);
+        jPanel7.setBorder(javax.swing.BorderFactory.createEtchedBorder());
+
+        botonPrestamo2.setText("Prestamo con #cta/RFC");
+        botonPrestamo2.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        botonPrestamo2.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                botonDevolucionActionPerformed(evt);
+                botonPrestamo2ActionPerformed(evt);
             }
         });
 
-        botonDevolucionCta.setText("Devolucion CTA");
-        botonDevolucionCta.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
-        botonDevolucionCta.addActionListener(new java.awt.event.ActionListener() {
+        botonPrestamo.setText("Prestamo");
+        botonPrestamo.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        botonPrestamo.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                botonDevolucionCtaActionPerformed(evt);
+                botonPrestamoActionPerformed(evt);
             }
         });
 
-        jLabel8.setText("Devoluciones");
+        jLabel7.setText("Préstamos");
 
-        javax.swing.GroupLayout jPanel6Layout = new javax.swing.GroupLayout(jPanel6);
-        jPanel6.setLayout(jPanel6Layout);
-        jPanel6Layout.setHorizontalGroup(
-            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel6Layout.createSequentialGroup()
+        javax.swing.GroupLayout jPanel7Layout = new javax.swing.GroupLayout(jPanel7);
+        jPanel7.setLayout(jPanel7Layout);
+        jPanel7Layout.setHorizontalGroup(
+            jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel7Layout.createSequentialGroup()
+                .addGap(100, 100, 100)
+                .addComponent(jLabel7)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+            .addGroup(jPanel7Layout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(botonDevolucion, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(botonDevolucionCta, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addGroup(jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(botonPrestamo, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(botonPrestamo2, javax.swing.GroupLayout.DEFAULT_SIZE, 241, Short.MAX_VALUE))
                 .addContainerGap())
-            .addGroup(jPanel6Layout.createSequentialGroup()
-                .addGap(81, 81, 81)
-                .addComponent(jLabel8)
-                .addContainerGap(132, Short.MAX_VALUE))
         );
-        jPanel6Layout.setVerticalGroup(
-            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel6Layout.createSequentialGroup()
-                .addComponent(jLabel8)
+        jPanel7Layout.setVerticalGroup(
+            jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel7Layout.createSequentialGroup()
+                .addComponent(jLabel7)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(botonDevolucion, javax.swing.GroupLayout.PREFERRED_SIZE, 24, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(botonDevolucionCta, javax.swing.GroupLayout.PREFERRED_SIZE, 24, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(botonPrestamo, javax.swing.GroupLayout.PREFERRED_SIZE, 25, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(botonPrestamo2, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
+
+        getContentPane().add(jPanel7);
+        jPanel7.setBounds(720, 510, 265, 103);
 
         jPanel8.setBackground(java.awt.SystemColor.controlHighlight);
         jPanel8.setBorder(javax.swing.BorderFactory.createEtchedBorder());
@@ -2635,18 +2725,28 @@ public class ventanasMuestra extends javax.swing.JFrame{
             }
         });
 
+        jButton1.setText("Créditos");
+        jButton1.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        jButton1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton1ActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel8Layout = new javax.swing.GroupLayout(jPanel8);
         jPanel8.setLayout(jPanel8Layout);
         jPanel8Layout.setHorizontalGroup(
             jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel8Layout.createSequentialGroup()
-                .addContainerGap()
+                .addGap(25, 25, 25)
                 .addComponent(administrar, javax.swing.GroupLayout.PREFERRED_SIZE, 153, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(54, 54, 54)
-                .addComponent(botonActualizarArregloHuellas, javax.swing.GroupLayout.PREFERRED_SIZE, 133, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 487, Short.MAX_VALUE)
+                .addGap(32, 32, 32)
+                .addComponent(botonActualizarArregloHuellas, javax.swing.GroupLayout.PREFERRED_SIZE, 144, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(32, 32, 32)
+                .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 134, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 438, Short.MAX_VALUE)
                 .addComponent(botonLimpiar, javax.swing.GroupLayout.PREFERRED_SIZE, 153, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(78, 78, 78)
+                .addGap(32, 32, 32)
                 .addComponent(botonSalir, javax.swing.GroupLayout.PREFERRED_SIZE, 153, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
@@ -2655,110 +2755,71 @@ public class ventanasMuestra extends javax.swing.JFrame{
             .addGroup(jPanel8Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(botonSalir, javax.swing.GroupLayout.DEFAULT_SIZE, 28, Short.MAX_VALUE)
+                    .addComponent(botonSalir, javax.swing.GroupLayout.DEFAULT_SIZE, 27, Short.MAX_VALUE)
+                    .addComponent(jButton1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(botonLimpiar, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(botonActualizarArregloHuellas, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(administrar, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addContainerGap())
+                    .addComponent(administrar, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(botonActualizarArregloHuellas, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addGap(18, 18, 18))
         );
 
-        jPanel7.setBackground(java.awt.SystemColor.controlHighlight);
-        jPanel7.setBorder(javax.swing.BorderFactory.createEtchedBorder());
+        getContentPane().add(jPanel8);
+        jPanel8.setBounds(30, 630, 1310, 60);
 
-        botonPrestamo2.setText("Prestamo con #cta/RFC");
-        botonPrestamo2.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
-        botonPrestamo2.addActionListener(new java.awt.event.ActionListener() {
+        jPanel6.setBackground(java.awt.SystemColor.controlHighlight);
+        jPanel6.setBorder(javax.swing.BorderFactory.createEtchedBorder());
+
+        botonDevolucion.setText("Devolucion");
+        botonDevolucion.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        botonDevolucion.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                botonPrestamo2ActionPerformed(evt);
+                botonDevolucionActionPerformed(evt);
             }
         });
 
-        botonPrestamo.setText("Prestamo");
-        botonPrestamo.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
-        botonPrestamo.addActionListener(new java.awt.event.ActionListener() {
+        botonDevolucionCta.setText("Devolucion con #cta/RFC");
+        botonDevolucionCta.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        botonDevolucionCta.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                botonPrestamoActionPerformed(evt);
+                botonDevolucionCtaActionPerformed(evt);
             }
         });
 
-        jLabel7.setText("Préstamos");
+        jLabel8.setText("Devoluciones");
 
-        javax.swing.GroupLayout jPanel7Layout = new javax.swing.GroupLayout(jPanel7);
-        jPanel7.setLayout(jPanel7Layout);
-        jPanel7Layout.setHorizontalGroup(
-            jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel7Layout.createSequentialGroup()
+        javax.swing.GroupLayout jPanel6Layout = new javax.swing.GroupLayout(jPanel6);
+        jPanel6.setLayout(jPanel6Layout);
+        jPanel6Layout.setHorizontalGroup(
+            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel6Layout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(botonPrestamo2, javax.swing.GroupLayout.DEFAULT_SIZE, 610, Short.MAX_VALUE)
-                    .addComponent(botonPrestamo, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(botonDevolucion, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(botonDevolucionCta, javax.swing.GroupLayout.DEFAULT_SIZE, 256, Short.MAX_VALUE))
                 .addContainerGap())
-            .addGroup(jPanel7Layout.createSequentialGroup()
-                .addGap(77, 77, 77)
-                .addComponent(jLabel7)
+            .addGroup(jPanel6Layout.createSequentialGroup()
+                .addGap(104, 104, 104)
+                .addComponent(jLabel8)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
-        jPanel7Layout.setVerticalGroup(
-            jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel7Layout.createSequentialGroup()
-                .addComponent(jLabel7)
-                .addGap(18, 18, 18)
-                .addComponent(botonPrestamo2, javax.swing.GroupLayout.PREFERRED_SIZE, 22, javax.swing.GroupLayout.PREFERRED_SIZE)
+        jPanel6Layout.setVerticalGroup(
+            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel6Layout.createSequentialGroup()
+                .addComponent(jLabel8)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(botonDevolucion, javax.swing.GroupLayout.PREFERRED_SIZE, 24, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(botonPrestamo, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(botonDevolucionCta, javax.swing.GroupLayout.PREFERRED_SIZE, 24, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
 
-        javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
-        jPanel2.setLayout(jPanel2Layout);
-        jPanel2Layout.setHorizontalGroup(
-            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel2Layout.createSequentialGroup()
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addGap(46, 46, 46)
-                        .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(18, 18, 18)
-                        .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(18, 18, 18)
-                        .addComponent(jPanel7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(18, 18, 18)
-                        .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addGap(28, 28, 28)
-                        .addComponent(jPanel8, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-        );
-        jPanel2Layout.setVerticalGroup(
-            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel2Layout.createSequentialGroup()
-                .addGap(18, 18, 18)
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                        .addComponent(jPanel7, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(jPanel6, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jPanel8, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(38, 38, 38))
-        );
-
-        getContentPane().add(jPanel2);
-        jPanel2.setBounds(28, 503, 1310, 200);
-
-        jLabel6.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        jLabel6.setIcon(new javax.swing.ImageIcon(getClass().getResource("/ventana/titulo.jpeg"))); // NOI18N
-        jLabel6.setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
-        jLabel6.setDebugGraphicsOptions(javax.swing.DebugGraphics.NONE_OPTION);
-        jLabel6.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        getContentPane().add(jLabel6);
-        jLabel6.setBounds(0, 0, 1360, 160);
+        getContentPane().add(jPanel6);
+        jPanel6.setBounds(1050, 510, 280, 99);
 
         jLabel3.setBackground(new java.awt.Color(255, 102, 102));
         jLabel3.setIcon(new javax.swing.ImageIcon(getClass().getResource("/ventana/extrafondo.jpg"))); // NOI18N
         getContentPane().add(jLabel3);
-        jLabel3.setBounds(0, 0, 1360, 750);
+        jLabel3.setBounds(0, 150, 1360, 600);
 
         jLabel5.setIcon(new javax.swing.ImageIcon(getClass().getResource("/ventana/fondodef.png"))); // NOI18N
         getContentPane().add(jLabel5);
@@ -2771,20 +2832,6 @@ public class ventanasMuestra extends javax.swing.JFrame{
     
     
     
-    private void botonPrestamoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonPrestamoActionPerformed
-        // TODO add your handling code here:
-        // lo que ocurre cuando se da clic en el boton Prestamo
-        try{
-            prestamo(); //ejecuta el metodo para el prestamo de equipo
-            resetHuella();
-            Reclutador.clear(); //limpia la variable global para insercion
-        }catch(Exception ex){
-            java.util.logging.Logger.getLogger(ventanasMuestra.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-            //Logger.getLogger(ventanasMuestra.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        
-    }//GEN-LAST:event_botonPrestamoActionPerformed
-
     private void formWindowOpened(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowOpened
         // TODO add your handling code here:
                 // lo que sucede cuando se abre el formulario
@@ -2834,61 +2881,61 @@ public class ventanasMuestra extends javax.swing.JFrame{
         
     }//GEN-LAST:event_formWindowOpened
 
-    private void botonAltaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonAltaActionPerformed
+    private void formWindowClosing(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosing
         // TODO add your handling code here:
-        
-        // lo que sucede cuando se da clic en el boton Alta
+    }//GEN-LAST:event_formWindowClosing
+
+    private void formWindowClosed(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_formWindowClosed
+
+    private void botonPrestamoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonPrestamoActionPerformed
+        // TODO add your handling code here:
+        // lo que ocurre cuando se da clic en el boton Prestamo
         try{
-            guardarHuella(); //ejecuta el metodo para guardar huella y persona en bd
+            prestamo(); //ejecuta el metodo para el prestamo de equipo
+            resetHuella();
             Reclutador.clear(); //limpia la variable global para insercion
-            resetHuella(); //limpia label de imagen de la huella del formulario
-            start(); //vuelve a inicializar la captura de huella y lo indica
-        }catch(SQLException ex){
-            //Logger.getLogger(ventanasMuestra.class.getName()).log(Level.SEVERE, null, ex );
-            java.util.logging.Logger.getLogger(ventanasMuestra.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-      
-        
-        
-    }//GEN-LAST:event_botonAltaActionPerformed
-
-    private void botonVerificarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonVerificarActionPerformed
-        // TODO add your handling code here:
-                // lo que sucede cuando se da clic en el boton Verificar
-        String cuenta = JOptionPane.showInputDialog("Número de cuenta/RFC para verificar"); //recibe la variable
-        verificarHuella(cuenta); //verifica si es la huella almacenada
-        //resetHuella();
-        //Reclutador.clear(); //limpia la variable global para insercion
-        botonPrestamo.setEnabled(true);
-        botonPrestamo.grabFocus();
-        
-        
-    }//GEN-LAST:event_botonVerificarActionPerformed
-
-    private void botonIdentificarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonIdentificarActionPerformed
-        // TODO add your handling code here:
-        
-        // lo que sucede cuando se da clic en el boton Identificar
-        try{
-            actualizarArregloLocalHuellas();
-            identificarHuella(); //ejecuta el metodo para identificar huella
-            //resetHuella();
-            //Reclutador.clear(); //limpia la variable global para insercion
-            botonPrestamo.setEnabled(true);
-            botonPrestamo.grabFocus();
-            botonDevolucion.setEnabled(true);
-            botonDevolucion.grabFocus();
-            //Iniciar(); //escuchar si el lector esta conectado o si se captura huella
-            //start(); //avisa cuando se usa el lector de huella
-            //EstadoHuellas();
-            
-            
-        //}catch(IOException ex){
         }catch(Exception ex){
             java.util.logging.Logger.getLogger(ventanasMuestra.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
             //Logger.getLogger(ventanasMuestra.class.getName()).log(Level.SEVERE, null, ex);
         }
-    }//GEN-LAST:event_botonIdentificarActionPerformed
+
+    }//GEN-LAST:event_botonPrestamoActionPerformed
+
+    private void botonPrestamo2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonPrestamo2ActionPerformed
+        // TODO add your handling code here:
+        try{
+            prestamo2("");
+            resetHuella();
+            Reclutador.clear();
+        }catch(Exception ex){
+            java.util.logging.Logger.getLogger(ventanasMuestra.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        }
+
+    }//GEN-LAST:event_botonPrestamo2ActionPerformed
+
+    private void botonDevolucionCtaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonDevolucionCtaActionPerformed
+        // TODO add your handling code here:
+        try{
+            devolverCta();
+            resetHuella();
+            Reclutador.clear();
+        }catch(Exception ex){
+            java.util.logging.Logger.getLogger(ventanasMuestra.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        }//fin try-catch//fin try-catch
+    }//GEN-LAST:event_botonDevolucionCtaActionPerformed
+
+    private void botonDevolucionActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonDevolucionActionPerformed
+        // TODO add your handling code here:
+        try{
+            devolver();
+            resetHuella();
+            Reclutador.clear();
+        }catch(Exception ex){
+            java.util.logging.Logger.getLogger(ventanasMuestra.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        }//fin try-catch//fin try-catch
+    }//GEN-LAST:event_botonDevolucionActionPerformed
 
     private void botonActualizarAgregandoHuellaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonActualizarAgregandoHuellaActionPerformed
         // TODO add your handling code here:
@@ -2916,47 +2963,61 @@ public class ventanasMuestra extends javax.swing.JFrame{
         }
     }//GEN-LAST:event_botonActualizarAgregandoHuellaActionPerformed
 
-    private void botonDevolucionActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonDevolucionActionPerformed
+    private void botonAltaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonAltaActionPerformed
         // TODO add your handling code here:
-        try{
-            devolver();
-            resetHuella();
-            Reclutador.clear();
-        }catch(Exception ex){
-            java.util.logging.Logger.getLogger(ventanasMuestra.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }//fin try-catch//fin try-catch
-    }//GEN-LAST:event_botonDevolucionActionPerformed
 
-    private void botonPrestamo2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonPrestamo2ActionPerformed
-        // TODO add your handling code here:
+        // lo que sucede cuando se da clic en el boton Alta
         try{
-            prestamo2("");
-            resetHuella();
-            Reclutador.clear();
-        }catch(Exception ex){
+            guardarHuella(); //ejecuta el metodo para guardar huella y persona en bd
+            Reclutador.clear(); //limpia la variable global para insercion
+            resetHuella(); //limpia label de imagen de la huella del formulario
+            start(); //vuelve a inicializar la captura de huella y lo indica
+        }catch(SQLException ex){
+            //Logger.getLogger(ventanasMuestra.class.getName()).log(Level.SEVERE, null, ex );
             java.util.logging.Logger.getLogger(ventanasMuestra.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
-        
-    }//GEN-LAST:event_botonPrestamo2ActionPerformed
 
-    private void botonDevolucionCtaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonDevolucionCtaActionPerformed
+    }//GEN-LAST:event_botonAltaActionPerformed
+
+    private void botonVerificarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonVerificarActionPerformed
         // TODO add your handling code here:
+        // lo que sucede cuando se da clic en el boton Verificar
+        String cuenta = JOptionPane.showInputDialog("Número de cuenta/RFC para verificar"); //recibe la variable
+        verificarHuella(cuenta); //verifica si es la huella almacenada
+        //resetHuella();
+        //Reclutador.clear(); //limpia la variable global para insercion
+        botonPrestamo.setEnabled(true);
+        botonPrestamo.grabFocus();
+
+    }//GEN-LAST:event_botonVerificarActionPerformed
+
+    private void botonIdentificarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonIdentificarActionPerformed
+        // TODO add your handling code here:
+
+        // lo que sucede cuando se da clic en el boton Identificar
         try{
-            devolverCta();
-            resetHuella();
-            Reclutador.clear();
+            actualizarArregloLocalHuellas();
+            identificarHuella(); //ejecuta el metodo para identificar huella
+            //resetHuella();
+            //Reclutador.clear(); //limpia la variable global para insercion
+            botonPrestamo.setEnabled(true);
+            botonPrestamo.grabFocus();
+            botonDevolucion.setEnabled(true);
+            botonDevolucion.grabFocus();
+            //Iniciar(); //escuchar si el lector esta conectado o si se captura huella
+            //start(); //avisa cuando se usa el lector de huella
+            //EstadoHuellas();
+
+            //}catch(IOException ex){
         }catch(Exception ex){
             java.util.logging.Logger.getLogger(ventanasMuestra.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }//fin try-catch//fin try-catch
-    }//GEN-LAST:event_botonDevolucionCtaActionPerformed
+            //Logger.getLogger(ventanasMuestra.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }//GEN-LAST:event_botonIdentificarActionPerformed
 
-    private void formWindowClosing(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosing
+    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
         // TODO add your handling code here:
-    }//GEN-LAST:event_formWindowClosing
-
-    private void formWindowClosed(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_formWindowClosed
+    }//GEN-LAST:event_jButton1ActionPerformed
 
     private void botonSalirActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonSalirActionPerformed
         // TODO add your handling code here:
@@ -2976,7 +3037,6 @@ public class ventanasMuestra extends javax.swing.JFrame{
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(null, "Ocurrió un error al INSERTAR EN LOGS" + ex, "Error", JOptionPane.ERROR_MESSAGE);
         }
-
     }//GEN-LAST:event_botonSalirActionPerformed
 
     private void administrarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_administrarActionPerformed
@@ -3114,26 +3174,27 @@ public class ventanasMuestra extends javax.swing.JFrame{
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton administrar;
-    public javax.swing.JButton botonActualizarAgregandoHuella;
+    private javax.swing.JButton botonActualizarAgregandoHuella;
     private javax.swing.JButton botonActualizarArregloHuellas;
-    public javax.swing.JButton botonAlta;
-    public javax.swing.JButton botonDevolucion;
+    private javax.swing.JButton botonAlta;
+    private javax.swing.JButton botonDevolucion;
     private javax.swing.JButton botonDevolucionCta;
-    public javax.swing.JButton botonIdentificar;
+    private javax.swing.JButton botonIdentificar;
     private javax.swing.JButton botonLimpiar;
-    public javax.swing.JButton botonPrestamo;
+    private javax.swing.JButton botonPrestamo;
     private javax.swing.JButton botonPrestamo2;
     private javax.swing.JButton botonSalir;
-    public javax.swing.JButton botonVerificar;
+    private javax.swing.JButton botonVerificar;
+    private javax.swing.JButton jButton1;
+    private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
-    private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
     private javax.swing.JLabel jLabel8;
+    private javax.swing.JLabel jLabel9;
     private javax.swing.JPanel jPanel1;
-    private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
     private javax.swing.JPanel jPanel4;
     private javax.swing.JPanel jPanel6;

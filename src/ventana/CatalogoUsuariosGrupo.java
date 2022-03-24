@@ -152,22 +152,27 @@ public class CatalogoUsuariosGrupo extends javax.swing.JDialog {
         if(listaMultiple.getSelectedValue().equals("")) {
             //JOPTION NO SE CREO
         } else{
+            ArrayList<String> Ausuarios = new ArrayList<String>();
             Connection c = conexionConsulta.conectar();        
-             String nameUsuario =listaMultiple.getSelectedValue().toString();
-            try {
-                PreparedStatement verificarStmt2 = c.prepareStatement("SELECT ID_USUARIO FROM USUARIOS WHERE NAME_USUARIO = ? ", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
-                verificarStmt2.setString(1, nameUsuario);
-                ResultSet rs2 = verificarStmt2.executeQuery();
-               if(rs2.next()){
-                    String idUsuario = rs2.getString("ID_USUARIO");
-                    CatalogoLaboratorios ch = new CatalogoLaboratorios(this, true, nombre, idUsuario);
-                    ch.setVisible(true);
-                    this.setVisible(false);
-                    this.dispose();
-               }
-            } catch (SQLException ex) {
-                Logger.getLogger(CatalogoUsuariosGrupo.class.getName()).log(Level.SEVERE, null, ex);
+            String nameUsuario =listaMultiple.getSelectedValue().toString();
+            List selectedItems = listaMultiple.getSelectedValuesList();
+            for (Object sel : selectedItems) {
+                try {                                                   
+                    PreparedStatement verificarStmt2 = c.prepareStatement("SELECT ID_USUARIO FROM USUARIOS WHERE NAME_USUARIO = ? ", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                    verificarStmt2.setString(1, sel.toString());
+                    ResultSet rs2 = verificarStmt2.executeQuery();
+                   if(rs2.next()){
+                        String idUsuario = rs2.getString("ID_USUARIO");
+                        Ausuarios.add(idUsuario);                        
+                   }
+                } catch (SQLException ex) {
+                    Logger.getLogger(CatalogoUsuariosGrupo.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
+            CatalogoLaboratorios ch = new CatalogoLaboratorios(this, true, nombre, Ausuarios);
+            ch.setVisible(true);
+            this.setVisible(false);
+            this.dispose();
         }
                     
     }//GEN-LAST:event_enviarLaboratoriosActionPerformed

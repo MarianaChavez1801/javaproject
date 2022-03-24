@@ -9,6 +9,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -32,14 +33,16 @@ public class CatalogoLaboratorios extends javax.swing.JDialog {
     boolean creado = false;
     boolean eliminar = false;
     boolean nuevo = false;
+    ArrayList<String> AusuariosG = new ArrayList<String>();
     
-    public CatalogoLaboratorios(javax.swing.JDialog parent, boolean modal, String nombreGrupo, String idUsuario) {
+    public CatalogoLaboratorios(javax.swing.JDialog parent, boolean modal, String nombreGrupo, ArrayList Ausuarios) {
         super(parent, modal);
-        Usuario = idUsuario;
+        //Usuario = idUsuario;
         nombre = nombreGrupo;
         creado = false;
         eliminar = false;
         nuevo = true;
+        AusuariosG = Ausuarios;
         initComponents();
         setLocationRelativeTo(null);
         
@@ -279,8 +282,8 @@ public class CatalogoLaboratorios extends javax.swing.JDialog {
             return eliminar= false;
         } else {
             Connection c = conexionConsulta.conectar();
-            List selectedItems = listaMultiple.getSelectedValuesList();
-            System.out.println(selectedItems);
+            
+            //System.out.println(selectedItems);
                 try{
                     PreparedStatement guardarStmt = c.prepareStatement("INSERT INTO GRUPOS(NOM_GRUPO) VALUES (?)");
                     guardarStmt.setString(1, nombre);
@@ -290,19 +293,24 @@ public class CatalogoLaboratorios extends javax.swing.JDialog {
                         verificarStmt.setString(1, nombre);                            
                         ResultSet res = verificarStmt.executeQuery();
                         if(res.next()){
-                            for (Object sel : selectedItems ){
-                                String idLaboratorio = sel.toString();
-                                System.out.println(idLaboratorio);
-
-                                    String idGrupo = res.getString("ID_GRUPO");
-                                    grupoCreado = 0;
+                            String idGrupo = res.getString("ID_GRUPO");            
+                            int count = AusuariosG.size();
+                            System.err.println(AusuariosG.size());
+                            grupoCreado = 0;
+                            while(count >= 0){ //Por cada usuario mandado
+                                List selectedItems = listaMultiple.getSelectedValuesList();
+                                for (Object sel : selectedItems ){
+                                    String idLaboratorio = sel.toString();
+                                    System.out.println(idLaboratorio);                                                                            
                                     PreparedStatement guardarStmt2 = c.prepareStatement("INSERT INTO GRUPOLABORATORIO(ID_GRUPO, ID_LAB, ID_USUARIO ) VALUES (?, ?, ? )");
                                     guardarStmt2.setString(1, idGrupo);
                                     guardarStmt2.setString(2, idLaboratorio);
-                                    guardarStmt2.setString(3, Usuario);
+                                    guardarStmt2.setString(3, AusuariosG.get(count - 1));
                                     grupoCreado = grupoCreado + guardarStmt2.executeUpdate();
                                     System.out.println(grupoCreado);
-                            } 
+                                }
+                                count--;
+                            }
                         } else {
                             //No encontre el grupo recien creado
                             JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un error al tratar de insertar los datos, no se encontro el GRUPO en la tabla GRUPO!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
@@ -372,7 +380,7 @@ public class CatalogoLaboratorios extends javax.swing.JDialog {
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 261, Short.MAX_VALUE)
+                    .addComponent(jScrollPane1)
                     .addGroup(layout.createSequentialGroup()
                         .addContainerGap()
                         .addComponent(textoVentanaListaMultiple, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))

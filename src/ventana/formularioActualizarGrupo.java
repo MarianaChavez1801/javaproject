@@ -10,6 +10,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import javax.swing.DefaultListModel;
 import javax.swing.JComboBox;
@@ -39,6 +40,7 @@ public class formularioActualizarGrupo extends javax.swing.JDialog {
     String usuarioActual = "";
     String labActual = "";
     String idGrupoActual = "";
+    ArrayList<String> Ausuarios = new ArrayList<String>();
     
     public void Obt_RolesDisponibles(String usuarioActual){
         try{
@@ -92,7 +94,7 @@ public class formularioActualizarGrupo extends javax.swing.JDialog {
         //int elementoSeleccion = -1;
         //int[] indices = new int[50];
         try{
-            PreparedStatement pstm = c.prepareStatement("SELECT ID_LAB FROM GRUPOLABORATORIO WHERE ID_GRUPO = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            PreparedStatement pstm = c.prepareStatement("SELECT DISTINCT ID_LAB FROM GRUPOLABORATORIO WHERE ID_GRUPO = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
             pstm.setString(1, nombre); 
             ResultSet res = pstm.executeQuery();
             int n = -1;
@@ -160,14 +162,14 @@ public class formularioActualizarGrupo extends javax.swing.JDialog {
                 for (Object sel2 : selectedItems ){
                         System.err.println(sel2.toString());
                     if(model.contains(sel2)){ //Si este grupo tiene este laboratorio
-                        System.err.println("ESTE ELEMENTO SI LO CONTIENE"+sel2.toString());
+                        //System.err.println("ESTE ELEMENTO SI LO CONTIENE"+sel2.toString());
                         model2.removeElement(sel2); //Lo elimina de los no registrados porque si esta registrado
                     } else{
-                        System.err.println("ESTE ELEMENTO no LO CONTIENE"+sel2.toString());
+                        //System.err.println("ESTE ELEMENTO no LO CONTIENE"+sel2.toString());
                     }
                 }
             } else {
-                System.err.println("Este JList esta vacio");
+                //System.err.println("Este JList esta vacio");
             }
         }catch(Exception e){
             JOptionPane.showMessageDialog(null, "Excepcion "+e+"\nSu descripcion es "+e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
@@ -216,28 +218,37 @@ public class formularioActualizarGrupo extends javax.swing.JDialog {
     }
     
     public void obtenerDatosGrupo(){
-        try{
+        try{            
             Connection c = conexionConsulta.conectar();
             nombreActual = cGruposDisponibles.getSelectedItem().toString();
             PreparedStatement verificarStmt1 = c.prepareStatement("SELECT ID_GRUPO FROM GRUPOS WHERE NOM_GRUPO = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
             verificarStmt1.setString(1, nombreActual); //Verificando que el grupo exista
             ResultSet rs1 = verificarStmt1.executeQuery();
-            if(rs1.next()){
+            if(rs1.next()){                
                 idGrupoActual = rs1.getString("ID_GRUPO");
-                PreparedStatement verificarStmt = c.prepareStatement("SELECT ID_USUARIO, ID_LAB FROM GRUPOLABORATORIO WHERE ID_GRUPO = ? ", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                PreparedStatement verificarStmt = c.prepareStatement("SELECT DISTINCT ID_USUARIO FROM GRUPOLABORATORIO WHERE ID_GRUPO = ? ", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
                 verificarStmt.setString(1, idGrupoActual); //Verificando que el grupo exista
-                ResultSet rs = verificarStmt.executeQuery();
-                if(rs.next()){
-                    usuarioActual = rs.getString("ID_USUARIO");
-                    labActual = rs.getString("ID_LAB");
-                    fNombreGrupo.setText(nombreActual);
-                    Obt_RolesDisponibles(usuarioActual);
-                    Obt_LaboratorioJlist (idGrupoActual);
-                    Obt_TodosLaboratoriosJlist ();
-                    Obt_LaboratorioQueNoSonGrupoJlist ();
-                } else {
-                    JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un ERROR al tratar de OBTENER LOS DATOS de este grupo!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );   
+                ResultSet rs = verificarStmt.executeQuery();                                    
+                //rs.beforeFirst();
+                int tamañoUsuarios = Ausuarios.size();
+                if(tamañoUsuarios > 0){ //Si el arreglo de usuarios trae usuarios previos
+                    while(tamañoUsuarios > 0){
+                        Ausuarios.remove(tamañoUsuarios - 1);
+                        tamañoUsuarios--;
+                    }
                 }
+                while(rs.next()){
+                    String idUsuario = rs.getString("ID_USUARIO");
+                    Ausuarios.add(idUsuario);
+                    //usuarioActual = rs.getString("ID_USUARIO");
+                    //labActual = rs.getString("ID_LAB");
+                    fNombreGrupo.setText(nombreActual);
+                    //Obt_RolesDisponibles(usuarioActual);
+                }
+                Obt_LaboratorioJlist (idGrupoActual);
+                Obt_TodosLaboratoriosJlist ();
+                Obt_LaboratorioQueNoSonGrupoJlist ();
+               
             }
         } catch (SQLException ex){
             JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un ERROR al tratar de OBTENER LOS DATOS de este grupo!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );   
@@ -246,103 +257,112 @@ public class formularioActualizarGrupo extends javax.swing.JDialog {
         }
     }
     
-    public void actualizarGrupo() {
+    /*public void actualizarGrupo() {
         
         int grupoCreado = 0;
         int elementosActualizadosGrupos = 0;
         String nombreGrupoNuevo = fNombreGrupo.getText(); 
-        String idUsuarioNuevo = cUsuariosDisponibles.getSelectedItem().toString();
+        //String idUsuarioNuevo = cUsuariosDisponibles.getSelectedItem().toString();
         DefaultListModel registrados = (DefaultListModel) listaLaboratoriosRegistrados.getModel();
         DefaultListModel noRegistrados = (DefaultListModel) listaLaboratoriosNoRegistrados.getModel();        
         if(registrados.getSize() <= 0){ //SI ES 0 ENTONCES ESTA VACIO
             JOptionPane.showMessageDialog(null, "¡¡¡NO se puede dejar el grupo sin LABORATORIOS!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
         } else {
-            int tamaño = registrados.getSize();
-            if(tamaño >= 0){
-                int[] indices = new int[50];
-                int n = 0;
-                while(tamaño >= 0){
-                    n++;
-                    indices[n] = n;
-                    tamaño--;
-                }
-                listaLaboratoriosRegistrados.setSelectedIndices(indices);
-                List selectedItems = listaLaboratoriosRegistrados.getSelectedValuesList();
-                listaLaboratoriosRegistrados.clearSelection();
-                for (Object sel2 : selectedItems ){
-                System.err.println(sel2.toString());
-                try{
-                    Connection c = conexionConsulta.conectar();
-                    PreparedStatement verificarStmt = c.prepareStatement("SELECT ID_LAB FROM GRUPOLABORATORIO WHERE ID_LAB = ? AND ID_GRUPO = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
-                    verificarStmt.setString(1, sel2.toString()); //Verificando que el grupo exista
-                    verificarStmt.setString(2, idGrupoActual); 
-                    ResultSet rs = verificarStmt.executeQuery();
-                    if(rs.next()){ // Si ya existe
-                            //NO HACE NADA
-                    } else { // Si no existe lo agrega
-                        PreparedStatement guardarStmt2 = c.prepareStatement("INSERT INTO GRUPOLABORATORIO(ID_GRUPO, ID_LAB, ID_USUARIO ) VALUES (?, ?, ? )");
-                        guardarStmt2.setString(1, idGrupoActual);
-                        guardarStmt2.setString(2, sel2.toString());
-                        guardarStmt2.setString(3, usuarioActual);
-                        //guardarStmt2.execute();
-                        grupoCreado = guardarStmt2.executeUpdate();
-                        System.out.println(grupoCreado);
-                        if(grupoCreado >= 1){   
-                            grupoCreado ++;
-                            guardarStmt2.close();                                
-                        } else {
-                            JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un error al tratar de ACTUALIZAR los LABORATORIOS EN GRUPOS!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
+            int count = Ausuarios.size();
+            //System.err.println("HAY "+count+" USUARIO EN ESTE GRUPO ");
+            while(count > 0){   
+                //System.err.println("ENTRE con el count en:\n"+count);
+                int tamaño = registrados.getSize();
+                if(tamaño >= 0){
+                    int[] indices = new int[50];
+                    int n = 0;
+                    while(tamaño >= 0){
+                        n++;
+                        indices[n] = n;
+                        tamaño--;
+                    }
+                    listaLaboratoriosRegistrados.setSelectedIndices(indices);
+                    List selectedItems = listaLaboratoriosRegistrados.getSelectedValuesList();
+                    listaLaboratoriosRegistrados.clearSelection();
+                    for (Object sel2 : selectedItems ){
+                    //System.err.println(sel2.toString());
+                    try{
+                        Connection c = conexionConsulta.conectar();
+                        PreparedStatement verificarStmt = c.prepareStatement("SELECT ID_LAB FROM GRUPOLABORATORIO WHERE ID_LAB = ? AND ID_GRUPO = ? AND ID_USUARIO = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                        verificarStmt.setString(1, sel2.toString()); //Verificando que el grupo exista
+                        verificarStmt.setString(2, idGrupoActual); 
+                        verificarStmt.setString(3, Ausuarios.get(count - 1));
+                        ResultSet rs = verificarStmt.executeQuery();
+                        if(rs.next()){ // Si ya existe
+                                //NO HACE NADA
+                        } else { // Si no existe lo agrega
+                            PreparedStatement guardarStmt2 = c.prepareStatement("INSERT INTO GRUPOLABORATORIO(ID_GRUPO, ID_LAB, ID_USUARIO ) VALUES (?, ?, ? )");
+                            guardarStmt2.setString(1, idGrupoActual);
+                            guardarStmt2.setString(2, sel2.toString());
+                            guardarStmt2.setString(3, Ausuarios.get(count - 1));
+                            //guardarStmt2.execute();
+                            grupoCreado = guardarStmt2.executeUpdate();
+                            //System.out.println(grupoCreado);
+                            if(grupoCreado >= 1){   
+                                grupoCreado ++;
+                                guardarStmt2.close();                                
+                            } else {
+                                JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un error al tratar de ACTUALIZAR los LABORATORIOS EN GRUPOS!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
+                            }
                         }
+                    }catch (SQLException ex){
+                        JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un ERROR al tratar de ACTUALIZAR LABORATORIOS *add*!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
+                    } finally{
+                        conexionConsulta.desconectar();
                     }
-                }catch (SQLException ex){
-                    JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un ERROR al tratar de ACTUALIZAR LABORATORIOS *add*!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
-                } finally{
-                    conexionConsulta.desconectar();
+                }    
+            } //Fin registrados
+
+            int tamaño2 = noRegistrados.getSize();
+            if(tamaño2 >= 0){
+                int[] indices2 = new int[50];
+                int n2 = 0;
+                while(tamaño2 >= 0){
+                    n2++;
+                    indices2[n2] = n2;
+                    tamaño2--;
                 }
-            }    
-        } //Fin registrados
-        
-        int tamaño2 = noRegistrados.getSize();
-        if(tamaño2 >= 0){
-            int[] indices2 = new int[50];
-            int n2 = 0;
-            while(tamaño2 >= 0){
-                n2++;
-                indices2[n2] = n2;
-                tamaño2--;
-            }
-            listaLaboratoriosNoRegistrados.setSelectedIndices(indices2);
-            List selectedItems2 = listaLaboratoriosNoRegistrados.getSelectedValuesList();
-            listaLaboratoriosNoRegistrados.clearSelection();
-            for (Object sel3 : selectedItems2 ){
-                System.err.println(sel3.toString());
-                try{
-                    Connection c = conexionConsulta.conectar();
-                    PreparedStatement verificarStmt = c.prepareStatement("SELECT ID_LAB FROM GRUPOLABORATORIO WHERE ID_LAB = ? AND ID_GRUPO = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
-                    verificarStmt.setString(1, sel3.toString()); //Verificando que el grupo exista
-                    verificarStmt.setString(2, idGrupoActual); 
-                    ResultSet rs = verificarStmt.executeQuery();
-                    if(rs.next()){ // Si ya existe
-                        //LO ELIMINA
-                        PreparedStatement actualizarStmt2 = c.prepareStatement("DELETE FROM GRUPOLABORATORIO WHERE ID_GRUPO = ? AND ID_LAB = ?");
-                        actualizarStmt2.setString(1, idGrupoActual);
-                        actualizarStmt2.setString(2, sel3.toString());
-                        elementosActualizadosGrupos = elementosActualizadosGrupos + actualizarStmt2.executeUpdate();
-                        actualizarStmt2.close();
+                listaLaboratoriosNoRegistrados.setSelectedIndices(indices2);
+                List selectedItems2 = listaLaboratoriosNoRegistrados.getSelectedValuesList();
+                listaLaboratoriosNoRegistrados.clearSelection();
+                for (Object sel3 : selectedItems2 ){
+                    //System.err.println(sel3.toString());
+                    try{
+                        Connection c = conexionConsulta.conectar();
+                        PreparedStatement verificarStmt = c.prepareStatement("SELECT ID_LAB FROM GRUPOLABORATORIO WHERE ID_LAB = ? AND ID_GRUPO = ? AND ID_USUARIO = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                        verificarStmt.setString(1, sel3.toString()); //Verificando que el grupo exista
+                        verificarStmt.setString(2, idGrupoActual); 
+                        verificarStmt.setString(3, Ausuarios.get(count - 1));
+                        ResultSet rs = verificarStmt.executeQuery();
+                        if(rs.next()){ // Si ya existe
+                            //LO ELIMINA
+                            PreparedStatement actualizarStmt2 = c.prepareStatement("DELETE FROM GRUPOLABORATORIO WHERE ID_GRUPO = ? AND ID_LAB = ? AND ID_USUARIO = ?");
+                            actualizarStmt2.setString(1, idGrupoActual);
+                            actualizarStmt2.setString(2, sel3.toString());
+                            actualizarStmt2.setString(3, Ausuarios.get(count - 1));
+                            elementosActualizadosGrupos = elementosActualizadosGrupos + actualizarStmt2.executeUpdate();
+                            actualizarStmt2.close();
+                        }
+                    }catch (SQLException ex){
+                         JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un ERROR al tratar de ACTUALIZAR LABORATORIOS *remove*!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
+                    }finally{
+                        conexionConsulta.desconectar();
                     }
-                }catch (SQLException ex){
-                     JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un ERROR al tratar de ACTUALIZAR LABORATORIOS *remove*!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
-                }finally{
-                    conexionConsulta.desconectar();
                 }
+            } else {
+                //No hay por eliminar
             }
-        } else {
-            //No hay por eliminar
-        }   
+            count--;
+        }
     } //Fin actualizacion de LABORATORIOS
         
         //ACTUALIZACION DE USUARIO    
-        if(idUsuarioNuevo.equals(usuarioActual)){
+        /*if(idUsuarioNuevo.equals(usuarioActual)){
             //NO SE CAMBIO EL USUARIO
             System.err.println("EL USUARIO ES IGUAL AL QUE YA TENIA");
         } else{
@@ -379,7 +399,7 @@ public class formularioActualizarGrupo extends javax.swing.JDialog {
             } finally{
                 conexionConsulta.desconectar();
             }
-        }  
+        }* /
         
         try{
             //ACTUALIZACION DE NOMBRE GRUPO
@@ -420,7 +440,201 @@ public class formularioActualizarGrupo extends javax.swing.JDialog {
             JOptionPane.showMessageDialog(null, "Los LABORATORIOS ELIMINADOS DE GRUPO se han ACTUALIZADO con exito\nElementos ACTUALIZADOS en total: "+elementosActualizadosGrupos, "Éxito", JOptionPane.INFORMATION_MESSAGE );
         }
         
+    }*/
+    
+    
+    public void actualizarGrupo() {
+        ArrayList<String> AlabsRegistrados = new ArrayList<String>();        
+        int grupoCreado = 0;
+        int grupoEliminado = 0;
+        int elementosActualizadosGrupos = 0;
+        int elementosActualizadosNomGrupos = 0;
+        boolean nombreModificado = false;
+        String nombreGrupoNuevo = fNombreGrupo.getText(); 
+        //String idUsuarioNuevo = cUsuariosDisponibles.getSelectedItem().toString();
+        DefaultListModel registrados = (DefaultListModel) listaLaboratoriosRegistrados.getModel();
+        DefaultListModel noRegistrados = (DefaultListModel) listaLaboratoriosNoRegistrados.getModel();        
+        if(registrados.getSize() <= 0){ //SI ES 0 ENTONCES ESTA VACIO
+            JOptionPane.showMessageDialog(null, "¡¡¡NO se puede dejar el grupo sin LABORATORIOS!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE );
+        } else {
+            int count = Ausuarios.size();
+            //System.err.println("HAY "+count+" USUARIO EN ESTE GRUPO ");
+            //Obtenemos los labs que se agregaron
+            //Recorrer todos los elementos de registrados:            
+            try{
+                Connection c = conexionConsulta.conectar();
+                PreparedStatement verificarStmt = c.prepareStatement("SELECT DISTINCT ID_LAB FROM GRUPOLABORATORIO WHERE ID_GRUPO = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);                
+                verificarStmt.setString(1, idGrupoActual);                
+                ResultSet rs = verificarStmt.executeQuery(); //OBTENEMOS LOS LABORATORIOS DE ESTE GRUPO
+                while(rs.next()){
+                    String idLab = rs.getString("ID_LAB");
+                    AlabsRegistrados.add(idLab);
+                }
+                
+                int tamaño = registrados.getSize();
+                if (tamaño >= 0) {
+                    int[] indices = new int[50];
+                    int n = 0;
+                    while (tamaño >= 0) {
+                        n++;
+                        indices[n] = n;
+                        tamaño--;
+                    }
+                    listaLaboratoriosRegistrados.setSelectedIndices(indices);
+                    List selectedItems = listaLaboratoriosRegistrados.getSelectedValuesList();                    
+                    listaLaboratoriosRegistrados.clearSelection();
+                    int laboratoriosReg = 0;                    
+                    ArrayList<String> AlabsPorRegistrar = new ArrayList<String>();        
+                    for (Object sel2 : selectedItems) { 
+                        laboratoriosReg = AlabsRegistrados.size();
+                        while(laboratoriosReg >= 0){
+                            if(laboratoriosReg == 0){
+                               AlabsPorRegistrar.add(sel2.toString());
+                               break;
+                            } 
+                            if (AlabsRegistrados.get(laboratoriosReg - 1).equals(sel2.toString())) {                                
+                                break;
+                            }
+                            laboratoriosReg--;                            
+                        }
+                        //laboratoriosReg--;
+                    } //Eliminamos los que aparezcan en registrados y en los mostrados, los que no se eliminen no estan registrados y hay que registrarlos                   
+                   while(count > 0){ //Por el numero de usuarios
+                       System.err.println("Entre por usuario count = "+count);
+                        laboratoriosReg = AlabsPorRegistrar.size(); //Obtenemos el tamaño de los labs a agregar
+                        while(laboratoriosReg > 0){    
+                            System.err.println("Voy a REGISTRAR: "+AlabsPorRegistrar.get(laboratoriosReg - 1));
+                            PreparedStatement guardarStmt2 = c.prepareStatement("INSERT INTO GRUPOLABORATORIO(ID_GRUPO, ID_LAB, ID_USUARIO ) VALUES (?, ?, ? )");
+                            guardarStmt2.setString(1, idGrupoActual);
+                            guardarStmt2.setString(2, AlabsPorRegistrar.get(laboratoriosReg - 1));
+                            guardarStmt2.setString(3, Ausuarios.get(count - 1));
+                            //guardarStmt2.execute();
+                            grupoCreado = guardarStmt2.executeUpdate();
+                            //System.out.println(grupoCreado);
+                            if (grupoCreado >= 1) {
+                                grupoCreado++;
+                                guardarStmt2.close();
+                            } else {
+                                JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un error al tratar de ACTUALIZAR los LABORATORIOS EN GRUPOS!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE);
+                            }
+                            
+                            laboratoriosReg--;
+                        }
+                        count --;
+                    }                   
+                }
+                
+            }catch(SQLException ex){
+                JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un ERROR al tratar de ACTUALIZAR LABORATORIOS!!! \n Intentelo nuevamente" +ex.getMessage()+"\n"+ ex.getSQLState(), "Error", JOptionPane.ERROR_MESSAGE);
+            } finally {
+                conexionConsulta.desconectar();
+            }    
+            
+            //Obtenemos los labs a eliminar   
+            ArrayList<String> AlabsRegistrados2 = new ArrayList<String>();            
+            int count2 = Ausuarios.size();            
+            try {
+                Connection c2 = conexionConsulta.conectar();
+                PreparedStatement verificarStmt = c2.prepareStatement("SELECT DISTINCT ID_LAB FROM GRUPOLABORATORIO WHERE ID_GRUPO = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                verificarStmt.setString(1, idGrupoActual);
+                ResultSet rs = verificarStmt.executeQuery(); //OBTENEMOS LOS LABORATORIOS DE ESTE GRUPO
+                while (rs.next()) {
+                    String idLab = rs.getString("ID_LAB");
+                    AlabsRegistrados2.add(idLab);
+                }
+                int tamaño2 = noRegistrados.getSize();
+                if (tamaño2 >= 0) {
+                    int[] indices2 = new int[50];
+                    int n2 = 0;
+                    while (tamaño2 >= 0) {
+                        n2++;
+                        indices2[n2] = n2;
+                        tamaño2--;
+                    }
+                    listaLaboratoriosNoRegistrados.setSelectedIndices(indices2);
+                    List selectedItems2 = listaLaboratoriosNoRegistrados.getSelectedValuesList();
+                    listaLaboratoriosNoRegistrados.clearSelection();
+                    ArrayList<String> AlabsPorRegistrar2 = new ArrayList<String>();
+                    int laboratoriosReg2 = 0;
+                    for (Object sel3 : selectedItems2) {
+                        laboratoriosReg2 = AlabsRegistrados.size();
+                        while (laboratoriosReg2 > 0) {                            
+                            if (AlabsRegistrados.get(laboratoriosReg2- 1).equals(sel3.toString())) {
+                                AlabsPorRegistrar2.add(sel3.toString());                                
+                            }
+                            laboratoriosReg2--;
+                        }
+                        //laboratoriosReg--;
+                    }
+                    while (count2 > 0) { //Por el numero de usuarios
+                        laboratoriosReg2 = AlabsPorRegistrar2.size();//Obtenemos el tamaño de los labs a agregar
+                        while (laboratoriosReg2 > 0) {
+                            PreparedStatement actualizarStmt2 = c2.prepareStatement("DELETE FROM GRUPOLABORATORIO WHERE ID_GRUPO = ? AND ID_LAB = ? AND ID_USUARIO = ?");
+                            actualizarStmt2.setString(1, idGrupoActual);
+                            actualizarStmt2.setString(2, AlabsPorRegistrar2.get(laboratoriosReg2 - 1));
+                            actualizarStmt2.setString(3, Ausuarios.get(count2 - 1));                            
+                            grupoEliminado = actualizarStmt2.executeUpdate();
+                            //System.out.println(grupoCreado);
+                            if (grupoEliminado >= 1) {
+                                grupoEliminado++;
+                                actualizarStmt2.close();
+                            } else {
+                                JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un error al tratar de ACTUALIZAR los LABORATORIOS EN GRUPOS!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE);
+                            }
+                            laboratoriosReg2--;
+                        }
+                        count2--;
+                    }
+                    
+                }
+                
+            }catch(SQLException ex) {
+                JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un ERROR al tratar de ACTUALIZAR LABORATORIOS *add*!!! \n Intentelo nuevamente"+ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            } finally {
+                conexionConsulta.desconectar();
+            }
+        } //fin actualizar labs
+        
+        try {
+            //ACTUALIZACION DE NOMBRE GRUPO
+            if (nombreGrupoNuevo.equals(nombreActual)) {
+                //No se cambio nombre de grupo
+            } else {
+                Connection c = conexionConsulta.conectar();
+                PreparedStatement verificarStmt = c.prepareStatement("SELECT NOM_GRUPO FROM GRUPOS WHERE NOM_GRUPO = ? ", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                verificarStmt.setString(1, nombreGrupoNuevo); //Verificando que el grupo no exista
+                ResultSet rs = verificarStmt.executeQuery();
+                if (rs.next()) { //Si existe
+                    JOptionPane.showMessageDialog(null, "¡¡¡Este grupo ya fue creado, para agregar mas porfavor hagalo en agregar a grupo !!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE);
+                } else {
+                    PreparedStatement actualizarStmt = c.prepareStatement("UPDATE GRUPOS SET NOM_GRUPO =? WHERE ID_GRUPO = ? ", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                    actualizarStmt.setString(1, nombreGrupoNuevo);
+                    actualizarStmt.setString(2, idGrupoActual);
+                    elementosActualizadosNomGrupos = actualizarStmt.executeUpdate();
+                    if (elementosActualizadosGrupos >= 1) {
+                        //JOptionPane.showMessageDialog(null, "El NOMBRE de GRUPO se ha ACTUALIZADO con exito\nElementos ACTUALIZADOS en total" + elementosActualizadosNomGrupos, "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                        nombreModificado = true;                        
+                    } else {
+                        JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un ERROR al tratar de ACTUALIZAR NOMBRE GRUPO!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            }
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(null, "¡¡¡Ocurrio un ERROR al tratar de ACTUALIZAR NOMBRE GRUPO!!! \n Intentelo nuevamente", "Error", JOptionPane.ERROR_MESSAGE);
+        } finally {
+            conexionConsulta.desconectar();
+        }        
+        String nomModificado = "NO";
+        if(nombreModificado == true){
+            nomModificado = "SI";
+        }
+        JOptionPane.showMessageDialog(null, "El grupo se actualizó \n Laboratorios Agregados: "+grupoCreado+"\nLaboratorios Eliminados: "+grupoEliminado+ "El nombre de Grupo "+nomModificado+" fue modificado", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+        this.setVisible(false);
+        this.dispose();
+        
     }
+    
+    
     
 
     /**
@@ -435,7 +649,6 @@ public class formularioActualizarGrupo extends javax.swing.JDialog {
         jPanel1 = new javax.swing.JPanel();
         jLabel1 = new javax.swing.JLabel();
         fNombreGrupo = new javax.swing.JTextField();
-        jLabel2 = new javax.swing.JLabel();
         jLabel3 = new javax.swing.JLabel();
         jLabel4 = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
@@ -466,8 +679,6 @@ public class formularioActualizarGrupo extends javax.swing.JDialog {
                 fNombreGrupoActionPerformed(evt);
             }
         });
-
-        jLabel2.setText("Usuario de Grupo:");
 
         jLabel3.setText("A continuacion se muestran los laboratorios dentro de este grupo, si desea agregar o eliminar laboratorios");
 
@@ -536,13 +747,9 @@ public class formularioActualizarGrupo extends javax.swing.JDialog {
                         .addComponent(jButton4))
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addContainerGap()
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addComponent(jLabel7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(jLabel2, javax.swing.GroupLayout.DEFAULT_SIZE, 121, Short.MAX_VALUE))
+                        .addComponent(jLabel7, javax.swing.GroupLayout.PREFERRED_SIZE, 121, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(50, 50, 50)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(fNombreGrupo, javax.swing.GroupLayout.PREFERRED_SIZE, 306, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(cUsuariosDisponibles, javax.swing.GroupLayout.PREFERRED_SIZE, 306, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                        .addComponent(fNombreGrupo, javax.swing.GroupLayout.PREFERRED_SIZE, 306, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addGap(0, 0, Short.MAX_VALUE))
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
@@ -572,6 +779,10 @@ public class formularioActualizarGrupo extends javax.swing.JDialog {
                                 .addGap(201, 201, 201)
                                 .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 184, javax.swing.GroupLayout.PREFERRED_SIZE)))
                         .addGap(0, 0, Short.MAX_VALUE))))
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(cUsuariosDisponibles, javax.swing.GroupLayout.PREFERRED_SIZE, 0, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(129, 129, 129))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -585,9 +796,7 @@ public class formularioActualizarGrupo extends javax.swing.JDialog {
                     .addComponent(fNombreGrupo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel7))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel2)
-                    .addComponent(cUsuariosDisponibles, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addComponent(cUsuariosDisponibles, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(22, 22, 22)
                 .addComponent(jLabel3)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
@@ -666,17 +875,17 @@ public class formularioActualizarGrupo extends javax.swing.JDialog {
         actualizarGrupo();
     }//GEN-LAST:event_jButton3ActionPerformed
 
-    private void cUsuariosDisponiblesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cUsuariosDisponiblesActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_cUsuariosDisponiblesActionPerformed
-
     private void cGruposDisponiblesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cGruposDisponiblesActionPerformed
         // TODO add your handling code here:
-        System.err.println("ELEMENTO SELECCIONADO");
+        //System.err.println("ELEMENTO SELECCIONADO");
         
         obtenerDatosGrupo();
         
     }//GEN-LAST:event_cGruposDisponiblesActionPerformed
+
+    private void cUsuariosDisponiblesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cUsuariosDisponiblesActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_cUsuariosDisponiblesActionPerformed
 
     /**
      * @param args the command line arguments
@@ -722,14 +931,13 @@ public class formularioActualizarGrupo extends javax.swing.JDialog {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JComboBox<String> cGruposDisponibles;
-    public javax.swing.JComboBox<String> cUsuariosDisponibles;
+    private javax.swing.JComboBox<String> cUsuariosDisponibles;
     public javax.swing.JTextField fNombreGrupo;
     private javax.swing.JButton jButton1;
     private javax.swing.JButton jButton2;
     private javax.swing.JButton jButton3;
     private javax.swing.JButton jButton4;
     private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;

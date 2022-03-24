@@ -116,7 +116,7 @@ public class formularioRolGrupoPass extends javax.swing.JDialog {
             //Establece los valores para la sentencia SQL
             Connection c = conexionConsulta.conectar();  
             //PreparedStatement guardarStmt = c.prepareStatement("INSERT INTO ROLES(NAME_ROL, PASSWORD) VALUES (?, ? )");
-            PreparedStatement guardarStmt = c.prepareStatement("UPDATE USUARIOS SET PASSWORD = AES_ENCRYPT(?,?) WHERE NAME_USUARIOS = ?");
+            PreparedStatement guardarStmt = c.prepareStatement("UPDATE USUARIOS SET PASSWORD = AES_ENCRYPT(?,?) WHERE NAME_USUARIO = ?");
             //PreparedStatement guardarStmt = c.prepareStatement("INSERT INTO ROLES(NAME_ROL, PASSWORD) VALUES (?,AES_ENCRYPT(?,?))");
             guardarStmt.setString(3, nombre);
             guardarStmt.setString(1, password);

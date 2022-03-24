@@ -237,6 +237,6 @@ public class inicio extends javax.swing.JFrame {
     private javax.swing.JButton botonSalir;
     private javax.swing.JButton jButton1;
     private javax.swing.JLabel jLabel1;
-    private javax.swing.JComboBox<String> seleccionLab;
+    public javax.swing.JComboBox<String> seleccionLab;
     // End of variables declaration//GEN-END:variables
 }
