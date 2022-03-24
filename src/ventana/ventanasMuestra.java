@@ -2383,12 +2383,12 @@ public class ventanasMuestra extends javax.swing.JFrame{
         //ListaLaboratorio.addElement("Selecciona un laboratorio");
         Connection c = conexionConsulta.conectar();
         try{
-            PreparedStatement pstm = c.prepareStatement("SELECT ID_LAB FROM GRUPOLABORATORIO WHERE ID_GRUPO= ? ORDER BY ID_LAB", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            PreparedStatement pstm = c.prepareStatement("SELECT DISTINCT ID_LAB FROM GRUPOLABORATORIO WHERE ID_GRUPO= ? ORDER BY ID_LAB", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
             pstm.setString(1, grupo);
             ResultSet res = pstm.executeQuery();
             while(res.next()){
                 ListaLaboratorio[n] = res.getString("ID_LAB");
-                System.err.println("Labbbbbbbb");
+                //System.err.println("Labbbbbbbb");
                 //System.out.println(ListaLaboratorio[n].toString());
                 n ++;
                 

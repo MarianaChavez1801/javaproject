@@ -93,7 +93,8 @@ public class formularioGrupo extends javax.swing.JFrame {
                                 JOptionPane.showMessageDialog(null, "Usted a INGRESADO con exito \n Esta ingresando al GRUPO: " + grupoNom, "Éxito", JOptionPane.INFORMATION_MESSAGE );
                                 break;
                             case "T":
-                                JOptionPane.showMessageDialog(null, "Usted a INGRESADO con exito \n Esta ingresando al GRUPO: " + grupoNom, "Éxito", JOptionPane.INFORMATION_MESSAGE );
+                                String nombreUsu = JOptionPane.showInputDialog("Usted a INGRESADO con exito \n Esta ingresando al GRUPO: " + grupoNom+"\nEsta ingresando como USUARIO TEMPORAL, ingrese su nombre:");                                
+                                nombre = nombreUsu;
                                 break;
                         }
                         consultarStmt.close();
